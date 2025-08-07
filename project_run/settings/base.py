@@ -114,3 +114,7 @@ STATIC_ROOT = 'static'
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+COMPANY_NAME = 'Blade Runer'
+SLOGAN = 'Standing still is just moving backward slowly'
+CONTACTS = '57th Street, New New York, NY 10001'
