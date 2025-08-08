@@ -3,13 +3,7 @@ from .models import Run
 from django.contrib.auth import get_user_model
 
 
-class RunSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Run
-        fields = '__all__'
-
-
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializerLong(serializers.ModelSerializer):
     type = serializers.SerializerMethodField()
 
     class Meta:
@@ -20,3 +14,19 @@ class UserSerializer(serializers.ModelSerializer):
         if obj.is_staff:
             return 'coach'
         return 'athlete'
+
+class UserSerializerBase(serializers.ModelSerializer):
+
+    class Meta:
+        model = get_user_model()
+        fields = 'id', 'username', 'last_name', 'first_name',
+
+
+
+
+class RunSerializer(serializers.ModelSerializer):
+    athlete = UserSerializerBase
+
+    class Meta:
+        model = Run
+        fields = '__all__'

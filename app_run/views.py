@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from app_run.models import Run
-from app_run.serializers import RunSerializer, UserSerializer
+from app_run.serializers import RunSerializer, UserSerializer, UserSerializerLong
 
 
 @api_view(['GET'])
@@ -17,13 +17,13 @@ def company_details(request):
 
 
 class RunViewSet(viewsets.ModelViewSet):
-    queryset = Run.objects.all()
+    queryset = Run.objects.all().select_related('athlete')
     serializer_class = RunSerializer
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = get_user_model().objects.exclude(is_superuser=True)
-    serializer_class = UserSerializer
+    serializer_class = UserSerializerLong
 
     def get_queryset(self):
         qs = super().get_queryset()
