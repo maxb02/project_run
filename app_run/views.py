@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from app_run.models import Run
 from app_run.serializers import RunSerializer, UserSerializerLong
+from rest_framework.filters import SearchFilter
 
 
 @api_view(['GET'])
@@ -24,6 +25,8 @@ class RunViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = get_user_model().objects.exclude(is_superuser=True)
     serializer_class = UserSerializerLong
+    filter_backends = SearchFilter,
+    search_fields = 'first_name', 'last_name'
 
     def get_queryset(self):
         qs = super().get_queryset()
