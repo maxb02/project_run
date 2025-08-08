@@ -4,7 +4,7 @@ from rest_framework import viewsets
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from app_run.models import Run
-from app_run.serializers import RunSerializer, UserSerializer, UserSerializerLong
+from app_run.serializers import RunSerializer, UserSerializerLong
 
 
 @api_view(['GET'])
