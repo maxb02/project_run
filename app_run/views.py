@@ -1,6 +1,8 @@
+from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from app_run.models import Run
@@ -20,6 +22,34 @@ def company_details(request):
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().select_related('athlete')
     serializer_class = RunSerializer
+
+
+class RunStarView(APIView):
+    def post(self, request, id):
+        run = get_object_or_404(Run, id=id)
+        if run.status == Run.Status.INIT:
+            run.status = Run.Status.IN_PROGRESS
+            run.save()
+            return Response({'message':
+                                 'Run has started'},
+                            status=status.HTTP_200_OK)
+        return Response({'message':
+                             f'The run status must be "init"; current status:{run.status}'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+
+class RunStopView(APIView):
+    def post(self, request, id):
+        run = get_object_or_404(Run, id=id)
+        if run.status == Run.Status.IN_PROGRESS:
+            run.status = Run.Status.FINISHED
+            run.save()
+            return Response({'message':
+                                 'Run has finished'},
+                            status=status.HTTP_200_OK)
+        return Response({'message':
+                             f'The run status must be "in_process"; current status:{run.status}'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
