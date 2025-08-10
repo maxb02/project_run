@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from app_run.models import Run
 from app_run.serializers import RunSerializer, UserSerializerLong
 from rest_framework.filters import SearchFilter
-
+from django_filters.rest_framework import DjangoFilterBackend
 
 @api_view(['GET'])
 def company_details(request):
@@ -22,6 +22,8 @@ def company_details(request):
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().select_related('athlete')
     serializer_class = RunSerializer
+    filter_backends = DjangoFilterBackend,
+    filterset_fields = 'status', 'athlete'
 
 
 class RunStarView(APIView):
