@@ -10,6 +10,7 @@ from app_run.serializers import RunSerializer, UserSerializerLong
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
+from rest_framework.pagination import PageNumberPagination
 
 @api_view(['GET'])
 def company_details(request):
@@ -19,6 +20,8 @@ def company_details(request):
         'contacts': settings.CONTACTS,
     })
 
+class Pagination(PageNumberPagination):
+    page_size_query_param = 'size'
 
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().select_related('athlete')
@@ -26,6 +29,7 @@ class RunViewSet(viewsets.ModelViewSet):
     filter_backends = DjangoFilterBackend, OrderingFilter,
     filterset_fields = ('status', 'athlete')
     ordering_fields = ('created_at',)
+    pagination_class = Pagination
 
 
 
@@ -63,6 +67,7 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
     ordering_fields = ('date_joined',)
+    pagination_class = Pagination
 
     def get_queryset(self):
         qs = super().get_queryset()
