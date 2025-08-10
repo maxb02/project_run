@@ -62,7 +62,7 @@ class RunStopView(APIView):
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = get_user_model().objects.exclude(is_superuser=True)
+    queryset = get_user_model().objects.exclude(is_superuser=True).prefetch_related('runs')
     serializer_class = UserSerializerLong
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
