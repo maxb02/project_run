@@ -17,7 +17,7 @@ class UserSerializerLong(serializers.ModelSerializer):
         return 'athlete'
 
     def get_runs_finished(self, obj):
-        return obj.runs.count()
+        return obj.runs.object.filter(status=Run.Status.FINISHED).count()
 
 
 class UserSerializerBase(serializers.ModelSerializer):
