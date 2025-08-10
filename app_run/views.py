@@ -9,6 +9,7 @@ from app_run.models import Run
 from app_run.serializers import RunSerializer, UserSerializerLong
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.filters import OrderingFilter
 
 @api_view(['GET'])
 def company_details(request):
@@ -22,8 +23,10 @@ def company_details(request):
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().select_related('athlete')
     serializer_class = RunSerializer
-    filter_backends = DjangoFilterBackend,
-    filterset_fields = 'status', 'athlete'
+    filter_backends = DjangoFilterBackend, OrderingFilter,
+    filterset_fields = ('status', 'athlete')
+    ordering_fields = ('created_at',)
+
 
 
 class RunStarView(APIView):
@@ -57,8 +60,9 @@ class RunStopView(APIView):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = get_user_model().objects.exclude(is_superuser=True)
     serializer_class = UserSerializerLong
-    filter_backends = SearchFilter,
+    filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
+    ordering_fields = ('date_joined',)
 
     def get_queryset(self):
         qs = super().get_queryset()
