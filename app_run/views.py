@@ -5,12 +5,13 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from app_run.models import Run
+from app_run.models import Run, AthleteInfo
 from app_run.serializers import RunSerializer, UserSerializerLong
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import PageNumberPagination
+
 
 @api_view(['GET'])
 def company_details(request):
@@ -20,8 +21,10 @@ def company_details(request):
         'contacts': settings.CONTACTS,
     })
 
+
 class Pagination(PageNumberPagination):
     page_size_query_param = 'size'
+
 
 class RunViewSet(viewsets.ModelViewSet):
     queryset = Run.objects.all().select_related('athlete')
@@ -30,7 +33,6 @@ class RunViewSet(viewsets.ModelViewSet):
     filterset_fields = ('status', 'athlete')
     ordering_fields = ('created_at',)
     pagination_class = Pagination
-
 
 
 class RunStarView(APIView):
@@ -78,3 +80,24 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             return qs.filter(is_staff=False)
         else:
             return qs
+
+
+class AthleteInfoView(APIView):
+    def get(self, request, user_id):
+        user = get_object_or_404(get_user_model(), id=user_id)
+        athlete_info, _ = AthleteInfo.objects.get_or_create(athlete_id=user.id)
+        return Response({'user_id': athlete_info.athlete.id,
+                         'weight': athlete_info.weight,
+                         'goals': athlete_info.goals})
+
+    def put(self, request, user_id):
+        user = get_object_or_404(get_user_model(), id=user_id)
+        weight = request.data.get('weight', None)
+        goals = request.data.get('goals', None)
+        athlete_info, _ = AthleteInfo.objects.update_or_create(athlete_id=user.id,
+                                                               defaults={'weight': weight,
+                                                                         'goals': goals})
+
+        return Response({'message':
+                             'Athlete Info has created or updated'},
+                        status=status.HTTP_201_CREATED)
