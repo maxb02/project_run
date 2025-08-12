@@ -20,5 +20,5 @@ class AthleteInfo(models.Model):
     weight = models.PositiveSmallIntegerField(null=True, blank=True,
                                               validators=[
                                                   MinValueValidator(1),
-                                                  MaxValueValidator(900)])
+                                                  MaxValueValidator(899)])
     goals = models.CharField(max_length=140, null=True, blank=True)
