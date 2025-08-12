@@ -98,8 +98,7 @@ class AthleteInfoView(APIView):
 
     def put(self, request, user_id):
         user = self._get_user(user_id)
-        data = JSONParser().parse(request)
-        serializer = AthleteInfoSerializer(data=data)
+        serializer = AthleteInfoSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         athlete_info, _ = (AthleteInfo.objects.
                            update_or_create(athlete_id=user.id,
