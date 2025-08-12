@@ -1,12 +1,14 @@
+from django.core.serializers import serialize
 from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view
+from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from app_run.models import Run, AthleteInfo
-from app_run.serializers import RunSerializer, UserSerializerLong
+from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
@@ -83,20 +85,29 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 class AthleteInfoView(APIView):
+
+    def _get_user(self, pk):
+        return get_object_or_404(get_user_model(), pk=pk)
+
     def get(self, request, user_id):
-        user = get_object_or_404(get_user_model(), id=user_id)
+        user = self._get_user(user_id)
         athlete_info, _ = AthleteInfo.objects.get_or_create(athlete_id=user.id)
         return Response({'user_id': athlete_info.athlete.id,
                          'weight': athlete_info.weight,
                          'goals': athlete_info.goals})
 
     def put(self, request, user_id):
-        user = get_object_or_404(get_user_model(), id=user_id)
-        weight = request.data.get('weight', None)
-        goals = request.data.get('goals', None)
-        athlete_info, _ = AthleteInfo.objects.update_or_create(athlete_id=user.id,
-                                                               defaults={'weight': weight,
-                                                                         'goals': goals})
+        user = self._get_user(user_id)
+        data = JSONParser().parse(request)
+        serializer = AthleteInfoSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        athlete_info, _ = (AthleteInfo.objects.
+                           update_or_create(athlete_id=user.id,
+                                            defaults={
+                                                'weight': serializer.validated_data.get('weight',
+                                                                                        None),
+                                                'goals': serializer.validated_data.get('goals',
+                                                                                       None)}))
 
         return Response({'message':
                              'Athlete Info has created or updated'},
