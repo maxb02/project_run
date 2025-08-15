@@ -41,7 +41,8 @@ class AthleteInfoSerializer(serializers.ModelSerializer):
 
 
 class ChallengeSerializer(serializers.ModelSerializer):
+    full_name = serializers.CharField(source='get_full_name_display', read_only=True)
     class Meta:
         model = Challenge
-        fields = '__all__'
+        fields = ('full_name', 'athlete')
 
