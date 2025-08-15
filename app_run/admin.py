@@ -1,4 +1,5 @@
 from django.contrib import admin
-from .models import Run
+from . import models
 
-admin.site.register(Run)
+admin.site.register(models.Run)
+admin.site.register(models.Challenge)

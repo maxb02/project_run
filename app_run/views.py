@@ -7,12 +7,14 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from app_run.models import Run, AthleteInfo
-from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer
+from app_run.models import Run, AthleteInfo, Challenge
+from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import PageNumberPagination
+
+from app_run.utils import award_challenge_if_completed
 
 
 @api_view(['GET'])
@@ -57,6 +59,7 @@ class RunStopView(APIView):
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
             run.save()
+            award_challenge_if_completed(request.user)
             return Response({'message':
                                  'Run has finished'},
                             status=status.HTTP_200_OK)
@@ -111,3 +114,14 @@ class AthleteInfoView(APIView):
         return Response({'message':
                              'Athlete Info has created or updated'},
                         status=status.HTTP_201_CREATED)
+
+
+class ChallengesView(viewsets.ReadOnlyModelViewSet):
+    serializer_class = ChallengeSerializer
+
+    def get_queryset(self):
+        athlete_id = self.request.query_params.get('athlete', None)
+        if athlete_id:
+            return Challenge.objects.filter(athlete_id=athlete_id).select_related('athlete')
+        return Challenge.objects.all().select_related('athlete')
+

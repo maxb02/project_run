@@ -22,3 +22,11 @@ class AthleteInfo(models.Model):
                                                   MinValueValidator(1),
                                                   MaxValueValidator(899)])
     goals = models.CharField(max_length=140, null=True, blank=True)
+
+
+class Challenge(models.Model):
+    class NameChoices(models.TextChoices):
+        RUN10 = 'run10', 'Сделай 10 Забегов!'
+
+    full_name = models.CharField(max_length=55, choices=NameChoices.choices, default=NameChoices.RUN10)
+    athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='challenges')
