@@ -59,7 +59,7 @@ class RunStopView(APIView):
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
             run.save()
-            award_challenge_if_completed(request.user)
+            award_challenge_if_completed(athlete_id=run.athlete.id)
             return Response({'message':
                                  'Run has finished'},
                             status=status.HTTP_200_OK)
