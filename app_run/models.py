@@ -30,3 +30,8 @@ class Challenge(models.Model):
 
     full_name = models.CharField(max_length=55, choices=NameChoices.choices, default=NameChoices.RUN10)
     athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='challenges')
+
+class Positions(models.Model):
+    run = models.ForeignKey(Run, on_delete=models.CASCADE, related_name='positions')
+    latitude = models.FloatField()
+    longitude = models.FloatField()
