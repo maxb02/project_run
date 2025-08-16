@@ -14,7 +14,7 @@ from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import PageNumberPagination
-
+from .utils import calculate_distance
 from app_run.utils import award_challenge_if_completed
 
 
@@ -61,6 +61,7 @@ class RunStopView(APIView):
             run.status = Run.Status.FINISHED
             run.save()
             award_challenge_if_completed(athlete_id=run.athlete.id)
+            calculate_distance(run_id=id)
             return Response({'message':
                                  'Run has finished'},
                             status=status.HTTP_200_OK)
@@ -136,5 +137,3 @@ class PositionsViewSet(viewsets.ModelViewSet):
         if run_id:
             return qs.filter(run_id=run_id)
         return qs
-
-

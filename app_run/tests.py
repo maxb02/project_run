@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from .models import Run, Challenge, Positions
+from .utils import calculate_distance
 
 
 class ChallengeRun10Test(APITestCase):
@@ -177,3 +178,34 @@ class PositionsEndpointTest(APITestCase):
                                                                      'longitude': -33,
                                                                      'latitude': -33})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+
+
+class CalculateDistanceRun(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com'
+        )
+        self.run = Run.objects.create(athlete=self.user,
+                                      comment='Test Run',
+                                      status=Run.Status.IN_PROGRESS)
+        Positions.objects.create(run=self.run,
+                                 latitude=41.49008,
+                                 longitude=-71.312796)
+        Positions.objects.create(run=self.run,
+                                 latitude=41.499498,
+                                 longitude=-81.695391)
+        self.distance = 866.4554329098687
+
+    def test_calculate_distance(self):
+        distance = calculate_distance(self.run.id)
+        self.assertEqual(distance, 866.4554329098687)
+        run = Run.objects.get(id=self.run.id)
+        self.assertEqual(run.distance, 866.4554329098687)
+
+    def test_calculate_distance_run_stop_endpoint(self):
+        response = self.client.post(reverse('run-stop', args=[self.run.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        response = self.client.get(reverse('runs-detail', args=[self.run.id]))
+        self.assertEqual(response.data['distance'], 866.4554329098687)

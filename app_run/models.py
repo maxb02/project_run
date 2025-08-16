@@ -13,6 +13,7 @@ class Run(models.Model):
     comment = models.TextField()
     athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='runs')
     status = models.CharField(choices=Status.choices, max_length=11, default=Status.INIT)
+    distance = models.FloatField(blank=True, null=True)
 
 
 class AthleteInfo(models.Model):
