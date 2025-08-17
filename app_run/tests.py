@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from .models import Run, Challenge, Positions
-from .utils import calculate_distance
+from .utils import calculate_distance, award_challenge_if_completed_run_50km
 
 
 class ChallengeRun10Test(APITestCase):
@@ -209,3 +209,32 @@ class CalculateDistanceRun(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         response = self.client.get(reverse('runs-detail', args=[self.run.id]))
         self.assertEqual(response.data['distance'], 866.4554329098687)
+
+class Run50kmChalengeTest(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com'
+        )
+        Run.objects.create(athlete=self.user,
+                                      comment='Test Run',
+                                      status=Run.Status.FINISHED,
+                           distance=45)
+        Run.objects.create(athlete=self.user,
+                                      comment='Test Run',
+                                      status=Run.Status.FINISHED,
+                           distance=10)
+
+    def test_award_challenge_if_completed_run_50km(self):
+        self.assertEqual(self.user.challenges.filter(full_name=Challenge.NameChoices.RUN50KM).count(), 0)
+        award_challenge_if_completed_run_50km(athlete_id=self.user.id)
+        self.assertEqual(self.user.challenges.filter(full_name=Challenge.NameChoices.RUN50KM).count(), 1)
+        Run.objects.create(athlete=self.user,
+                           comment='Test Run',
+                           status=Run.Status.FINISHED,
+                           distance=55)
+        award_challenge_if_completed_run_50km(athlete_id=self.user.id)
+        self.assertEqual(self.user.challenges.filter(full_name=Challenge.NameChoices.RUN50KM).count(), 1)
+
+
