@@ -156,7 +156,7 @@ def upload_file(request):
         }, status=status.HTTP_400_BAD_REQUEST)
 
     invalid_rows = []
-    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+    for row in ws.iter_rows(min_row=2, values_only=True):
         if all(cell is None for cell in row):
             continue
         data = {

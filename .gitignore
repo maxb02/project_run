@@ -4,3 +4,4 @@ venv/
 __pycache__/
 .env
 db.sqlite3
+/app_run/tests/fixtures/~$upload_example.xlsx

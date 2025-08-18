@@ -260,8 +260,8 @@ class CollectibleItemsFileUplodadTest(APITestCase):
         )
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 3)
-        self.assertEqual(CollectibleItem.objects.count(), 3)
+        self.assertEqual(len(response.data), 4)
+        self.assertEqual(CollectibleItem.objects.count(), 2)
 
 class CollectibleItemsEndpointTest(APITestCase):
     def setUp(self):
@@ -279,6 +279,7 @@ class CollectibleItemsEndpointTest(APITestCase):
                                        value=3)
     def test_endpoint_list(self):
         response = self.client.get(reverse('collectible_item-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
