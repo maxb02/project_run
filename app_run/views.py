@@ -7,15 +7,16 @@ from rest_framework import viewsets, status
 from rest_framework.views import APIView
 from django.conf import settings
 from django.contrib.auth import get_user_model
-from app_run.models import Run, AthleteInfo, Challenge, Positions
+from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer, \
-    PositionsSerializer
+    PositionsSerializer, CollectibleItemSerializer
 from rest_framework.filters import SearchFilter
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import OrderingFilter
 from rest_framework.pagination import PageNumberPagination
 from .utils import calculate_distance, award_challenge_if_completed_run_50km
 from app_run.utils import award_challenge_if_completed_run_10
+from openpyxl import load_workbook
 
 
 @api_view(['GET'])
@@ -138,3 +139,42 @@ class PositionsViewSet(viewsets.ModelViewSet):
         if run_id:
             return qs.filter(run_id=run_id)
         return qs
+
+@api_view(['POST'])
+def upload_file(request):
+    file = request.FILES.get('file')
+    EXPECTED_HEADERS = ['Name','UID', 'Value', 'Latitude', 'Longitude', 'URL']
+    wb = load_workbook(file)
+    ws = wb.active
+
+    headers = [cell.value for cell in next(ws.iter_rows(max_row=1))]
+    if headers != EXPECTED_HEADERS:
+        return Response({
+            'error': 'Wrong headers',
+            'expected': EXPECTED_HEADERS,
+            'got': headers,
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    invalid_rows = []
+    for i, row in enumerate(ws.iter_rows(min_row=2, values_only=True)):
+        if all(cell is None for cell in row):
+            continue
+        data = {
+            'name': row[0],
+            'uid': row[1],
+            'value': row[2],
+            'latitude': row[3],
+            'longitude': row[4],
+            'picture': row[5]
+        }
+        serializer = CollectibleItemSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            invalid_rows.append(row)
+    return Response(invalid_rows)
+
+class CollectibleItemViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CollectibleItemSerializer
+    queryset = CollectibleItem.objects.all()
+

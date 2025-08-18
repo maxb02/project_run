@@ -1,11 +1,15 @@
+import os
+
+from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import TestCase
 
 from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
-from rest_framework import status
-from .models import Run, Challenge, Positions
-from .utils import calculate_distance, award_challenge_if_completed_run_50km
+from rest_framework import status, response
+from app_run.models import Run, Challenge, Positions, CollectibleItem
+from app_run.utils import calculate_distance, award_challenge_if_completed_run_50km
 
 
 class ChallengeRun10Test(APITestCase):
@@ -237,4 +241,44 @@ class Run50kmChalengeTest(APITestCase):
         award_challenge_if_completed_run_50km(athlete_id=self.user.id)
         self.assertEqual(self.user.challenges.filter(full_name=Challenge.NameChoices.RUN50KM).count(), 1)
 
+
+class CollectibleItemsFileUplodadTest(APITestCase):
+    def test_file_upload(self):
+        self.assertEqual(CollectibleItem.objects.count(), 0)
+
+        file_name = 'upload_example.xlsx'
+        path = os.path.join(settings.BASE_DIR, 'app_run', 'tests', 'fixtures', file_name, )
+        with open(path, 'rb') as f:
+            file = SimpleUploadedFile(file_name,f.read(),
+                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
+
+        response = self.client.post(
+            reverse('upload-file'),
+            {"file": file},
+            format="multipart"
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 3)
+        self.assertEqual(CollectibleItem.objects.count(), 3)
+
+class CollectibleItemsEndpointTest(APITestCase):
+    def setUp(self):
+        CollectibleItem.objects.create(name='Test1',
+                                       uid='asd',
+                                       latitude=11,
+                                       longitude=22,
+                                       picture='https:\\test.com',
+                                       value=1)
+        CollectibleItem.objects.create(name='Test2',
+                                       uid='asd',
+                                       latitude=11,
+                                       longitude=22,
+                                       picture='https:\\test.com',
+                                       value=3)
+    def test_endpoint_list(self):
+        response = self.client.get(reverse('collectible_item-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data), 2)
 

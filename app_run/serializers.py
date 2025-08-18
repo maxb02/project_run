@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Run, AthleteInfo, Challenge, Positions
+from .models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 from django.contrib.auth import get_user_model
 
 
@@ -67,3 +67,8 @@ class PositionsSerializer(serializers.ModelSerializer):
         if value.status == Run.Status.IN_PROGRESS:
             return value
         raise serializers.ValidationError(f'The run status must be "in_process"; current status:{value.status}')
+
+class CollectibleItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CollectibleItem
+        fields = '__all__'
