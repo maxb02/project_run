@@ -1,15 +1,22 @@
-from rest_framework import serializers
-from .models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 from django.contrib.auth import get_user_model
+from rest_framework import serializers
+
+from .models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 
 
-class UserSerializerLong(serializers.ModelSerializer):
+class UserSerializerBase(serializers.ModelSerializer):
+    class Meta:
+        model = get_user_model()
+        fields = 'id', 'username', 'last_name', 'first_name',
+
+
+class UserSerializerLong(UserSerializerBase):
     type = serializers.SerializerMethodField()
     runs_finished = serializers.SerializerMethodField()
 
-    class Meta:
+    class Meta(UserSerializerBase.Meta):
         model = get_user_model()
-        fields = ('id', 'date_joined', 'username', 'last_name', 'first_name', 'type', 'runs_finished')
+        fields = UserSerializerBase.Meta.fields + ('date_joined', 'type', 'runs_finished')
 
     def get_type(self, obj):
         if obj.is_staff:
@@ -20,10 +27,13 @@ class UserSerializerLong(serializers.ModelSerializer):
         return obj.runs.filter(status=Run.Status.FINISHED).count()
 
 
-class UserSerializerBase(serializers.ModelSerializer):
-    class Meta:
+class UserSerializerDetail(UserSerializerLong):
+    items = serializers.PrimaryKeyRelatedField(source='collectible_items', many=True,
+                                               queryset=CollectibleItem.objects.all())
+
+    class Meta(UserSerializerLong.Meta):
         model = get_user_model()
-        fields = 'id', 'username', 'last_name', 'first_name',
+        fields = UserSerializerLong.Meta.fields + ('items',)
 
 
 class RunSerializer(serializers.ModelSerializer):
@@ -67,6 +77,7 @@ class PositionsSerializer(serializers.ModelSerializer):
         if value.status == Run.Status.IN_PROGRESS:
             return value
         raise serializers.ValidationError(f'The run status must be "in_process"; current status:{value.status}')
+
 
 class CollectibleItemSerializer(serializers.ModelSerializer):
     class Meta:

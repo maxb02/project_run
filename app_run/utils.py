@@ -1,8 +1,8 @@
-from django.db.models.aggregates import Sum
-
-from .models import Challenge, Run, Positions
 from django.contrib.auth import get_user_model
+from django.db.models.aggregates import Sum
 from geopy.distance import geodesic
+
+from .models import Challenge, Run, Positions, CollectibleItem
 
 
 def award_challenge_if_completed_run_10(athlete_id):
@@ -21,7 +21,7 @@ def award_challenge_if_completed_run_50km(athlete_id):
     return None
 
 
-def calculate_distance(run_id):
+def calculate_run_distance(run_id):
     positions = Positions.objects.filter(run_id=run_id).order_by('id').values_list('latitude', 'longitude')
 
     total_distance = sum(
@@ -30,3 +30,12 @@ def calculate_distance(run_id):
     )
     Run.objects.filter(id=run_id).update(distance=total_distance)
     return total_distance
+
+
+def collect_item_if_nearby(latitude, longitude, user):
+    collected_items = []
+    for item in CollectibleItem.objects.exclude(user=user):
+        if geodesic((latitude, longitude), (item.latitude, item.longitude)).meters <= 100:
+            collected_items.append(item)
+    user.collectible_items.add(*collected_items)
+    return collected_items

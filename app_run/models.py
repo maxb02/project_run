@@ -1,6 +1,6 @@
-from django.db import models
 from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
+from django.db import models
 
 
 class Run(models.Model):
@@ -23,6 +23,7 @@ class AthleteInfo(models.Model):
                                                   MinValueValidator(1),
                                                   MaxValueValidator(899)])
     goals = models.CharField(max_length=140, null=True, blank=True)
+    items = models.ManyToManyField('CollectibleItem', blank=True, related_name='athlete_info')
 
 
 class Challenge(models.Model):
@@ -45,3 +46,5 @@ class CollectibleItem(models.Model):
     longitude = models.FloatField()
     picture = models.URLField()
     value = models.IntegerField()
+    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='collectible_items', blank=True,
+                             null=True)

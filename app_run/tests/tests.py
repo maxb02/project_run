@@ -1,15 +1,17 @@
 import os
+from unittest.mock import patch, MagicMock
 
 from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.test import TestCase
-
-from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
-from rest_framework import status, response
-from app_run.models import Run, Challenge, Positions, CollectibleItem
-from app_run.utils import calculate_distance, award_challenge_if_completed_run_50km
+from rest_framework import status
+from rest_framework.test import APITestCase
+
+from app_run.models import CollectibleItem
+from app_run.models import Run, Challenge, Positions
+from app_run.utils import calculate_run_distance, award_challenge_if_completed_run_50km
+from app_run.utils import collect_item_if_nearby
 
 
 class ChallengeRun10Test(APITestCase):
@@ -203,7 +205,7 @@ class CalculateDistanceRun(APITestCase):
         self.distance = 866.4554329098687
 
     def test_calculate_distance(self):
-        distance = calculate_distance(self.run.id)
+        distance = calculate_run_distance(self.run.id)
         self.assertEqual(distance, 866.4554329098687)
         run = Run.objects.get(id=self.run.id)
         self.assertEqual(run.distance, 866.4554329098687)
@@ -214,6 +216,7 @@ class CalculateDistanceRun(APITestCase):
         response = self.client.get(reverse('runs-detail', args=[self.run.id]))
         self.assertEqual(response.data['distance'], 866.4554329098687)
 
+
 class Run50kmChalengeTest(APITestCase):
     def setUp(self):
         self.user = get_user_model().objects.create_user(
@@ -222,12 +225,12 @@ class Run50kmChalengeTest(APITestCase):
             email='test@example.com'
         )
         Run.objects.create(athlete=self.user,
-                                      comment='Test Run',
-                                      status=Run.Status.FINISHED,
+                           comment='Test Run',
+                           status=Run.Status.FINISHED,
                            distance=45)
         Run.objects.create(athlete=self.user,
-                                      comment='Test Run',
-                                      status=Run.Status.FINISHED,
+                           comment='Test Run',
+                           status=Run.Status.FINISHED,
                            distance=10)
 
     def test_award_challenge_if_completed_run_50km(self):
@@ -249,9 +252,9 @@ class CollectibleItemsFileUplodadTest(APITestCase):
         file_name = 'upload_example.xlsx'
         path = os.path.join(settings.BASE_DIR, 'app_run', 'tests', 'fixtures', file_name, )
         with open(path, 'rb') as f:
-            file = SimpleUploadedFile(file_name,f.read(),
-                    content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                )
+            file = SimpleUploadedFile(file_name, f.read(),
+                                      content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                                      )
 
         response = self.client.post(
             reverse('upload-file'),
@@ -262,6 +265,7 @@ class CollectibleItemsFileUplodadTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 4)
         self.assertEqual(CollectibleItem.objects.count(), 2)
+
 
 class CollectibleItemsEndpointTest(APITestCase):
     def setUp(self):
@@ -277,9 +281,130 @@ class CollectibleItemsEndpointTest(APITestCase):
                                        longitude=22,
                                        picture='https:\\test.com',
                                        value=3)
+
     def test_endpoint_list(self):
         response = self.client.get(reverse('collectible_item-list'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
 
+
+class CollectibleItemsTest(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+        self.coleectible_item1 = CollectibleItem.objects.create(name='Test1',
+                                                                uid='asd',
+                                                                latitude=11,
+                                                                longitude=22,
+                                                                picture='https:\\test.com',
+                                                                value=1,
+                                                                user=self.user)
+        self.coleectible_item2 = CollectibleItem.objects.create(name='Test2',
+                                                                uid='asd',
+                                                                latitude=11,
+                                                                longitude=22,
+                                                                picture='https:\\test.com',
+                                                                value=3,
+                                                                user=self.user)
+
+    def test_endpoint_list(self):
+        response = self.client.get(reverse('users-list'))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data[0]),
+                         {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type'})
+
+    def test_endpoint_detail(self):
+        response = self.client.get(reverse('users-detail', kwargs={'pk': self.user.id}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(set(response.data),
+                         {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items'})
+
+
+class CollectItemNearbyUnitTestCase(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+
+        self.item1 = CollectibleItem.objects.create(
+            name="Item1",
+            uid="item1uid",
+            latitude=40.0000,
+            longitude=29.0000,
+            picture="http://example.com/item1.png",
+            value=100
+        )
+
+        self.item2 = CollectibleItem.objects.create(
+            name="Item2",
+            uid="item2uid",
+            latitude=40.0020,
+            longitude=29.0020,
+            picture="http://example.com/item2.png",
+            value=200
+        )
+
+    @patch("app_run.utils.geodesic")
+    def test_collect_item_if_nearby(self, mock_geodesic):
+        near = MagicMock()
+        near.meters = 50
+        far = MagicMock()
+        far.meters = 200
+
+        mock_geodesic.side_effect = [near, far]
+
+        collected = collect_item_if_nearby(10, 10, self.user)
+
+        self.assertIn(self.item1, collected)
+        self.assertNotIn(self.item2, collected)
+        self.assertTrue(self.user.collectible_items.filter(id=self.item1.id).exists())
+
+
+class CollectItemNearbyUnitTestCase(APITestCase):
+    ITEM_POSITION = (50.4501, 30.5234)
+    DISTANCE_50_METER = (50.45055, 30.5234)
+    DISTANCE_150_METER = (50.45145, 30.5234)
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+
+        self.item = CollectibleItem.objects.create(
+            name="Item1",
+            uid="item1uid",
+            latitude=self.ITEM_POSITION[0],
+            longitude=self.ITEM_POSITION[1],
+            picture="http://example.com/item1.png",
+            value=100
+        )
+
+        self.run_in_progress = Run.objects.create(athlete=self.user,
+                                                  comment='Test Run 1',
+                                                  status=Run.Status.IN_PROGRESS)
+
+    def test_endpoint_create_position_far_from_collect_item(self):
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': self.DISTANCE_150_METER[0],
+                                                                     'longitude': self.DISTANCE_150_METER[1],
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.user.collectible_items.count(), 0)
+
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': self.DISTANCE_50_METER[0],
+                                                                     'longitude': self.DISTANCE_50_METER[1],
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.user.collectible_items.count(), 1)

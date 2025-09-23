@@ -1,22 +1,21 @@
-from django.core.serializers import serialize
 from django.shortcuts import get_object_or_404
-from rest_framework.decorators import api_view
-from rest_framework.parsers import JSONParser
-from rest_framework.response import Response
-from rest_framework import viewsets, status
-from rest_framework.views import APIView
-from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
+from django_filters.rest_framework import DjangoFilterBackend
+from openpyxl import load_workbook
+from rest_framework import viewsets, status
+from rest_framework.decorators import api_view
+from rest_framework.filters import OrderingFilter
+from rest_framework.filters import SearchFilter
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
 from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer, \
-    PositionsSerializer, CollectibleItemSerializer
-from rest_framework.filters import SearchFilter
-from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter
-from rest_framework.pagination import PageNumberPagination
-from .utils import calculate_distance, award_challenge_if_completed_run_50km
+    PositionsSerializer, CollectibleItemSerializer, UserSerializerDetail
 from app_run.utils import award_challenge_if_completed_run_10
-from openpyxl import load_workbook
+from .utils import calculate_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
 
 
 @api_view(['GET'])
@@ -62,7 +61,7 @@ class RunStopView(APIView):
             run.status = Run.Status.FINISHED
             run.save()
             award_challenge_if_completed_run_10(athlete_id=run.athlete.id)
-            calculate_distance(run_id=id)
+            calculate_run_distance(run_id=id)
             award_challenge_if_completed_run_50km(athlete_id=run.athlete.id)
             return Response({'message':
                                  'Run has finished'},
@@ -74,7 +73,6 @@ class RunStopView(APIView):
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = get_user_model().objects.exclude(is_superuser=True).prefetch_related('runs')
-    serializer_class = UserSerializerLong
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
     ordering_fields = ('date_joined',)
@@ -89,6 +87,13 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             return qs.filter(is_staff=False)
         else:
             return qs
+
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return UserSerializerDetail
+        else:
+            return UserSerializerLong
+
 
 
 class AthleteInfoView(APIView):
@@ -132,6 +137,15 @@ class ChallengesView(viewsets.ReadOnlyModelViewSet):
 
 class PositionsViewSet(viewsets.ModelViewSet):
     serializer_class = PositionsSerializer
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+
+        collect_item_if_nearby(
+            latitude=serializer.validated_data.get('latitude'),
+            longitude=serializer.validated_data.get('longitude'),
+            user=instance.run.athlete
+        )
 
     def get_queryset(self):
         qs = Positions.objects.all()
