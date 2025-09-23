@@ -160,6 +160,11 @@ class PositionsEndpointTest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'longitude': -58.3702,
+                                                                     'latitude': -234434.6083})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -180,
                                                                      'latitude': 90})
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
@@ -407,4 +412,11 @@ class CollectItemNearbyUnitTestCase(APITestCase):
                                                                      'longitude': self.DISTANCE_50_METER[1],
                                                                      })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(self.user.collectible_items.count(), 1)
+
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': '-234434.6083',
+                                                                     'longitude': '-58.3702',
+                                                                     }, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.user.collectible_items.count(), 1)

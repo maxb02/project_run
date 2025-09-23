@@ -1,4 +1,3 @@
-from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -139,6 +138,7 @@ class PositionsViewSet(viewsets.ModelViewSet):
     serializer_class = PositionsSerializer
 
     def perform_create(self, serializer):
+        serializer.is_valid(raise_exception=True)
         instance = serializer.save()
 
         collect_item_if_nearby(
