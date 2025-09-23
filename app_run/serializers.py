@@ -69,7 +69,7 @@ class PositionsSerializer(serializers.ModelSerializer):
         raise serializers.ValidationError('Longitude must be between -180 and 180 degrees')
 
     def validate_latitude(self, value):
-        if -90 < value < 90:
+        if -90 <= value <= 90:
             return value
         raise serializers.ValidationError('Latitude must be between -90 and 90 degrees')
 

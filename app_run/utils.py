@@ -35,6 +35,7 @@ def calculate_run_distance(run_id):
 def collect_item_if_nearby(latitude, longitude, user):
     collected_items = []
     for item in CollectibleItem.objects.exclude(user=user):
+        print('collect_item_if_nearby', latitude, longitude)
         if geodesic((latitude, longitude), (item.latitude, item.longitude)).meters <= 100:
             collected_items.append(item)
     user.collectible_items.add(*collected_items)
