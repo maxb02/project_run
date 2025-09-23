@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
@@ -38,6 +39,12 @@ class Positions(models.Model):
     run = models.ForeignKey(Run, on_delete=models.CASCADE, related_name='positions')
     latitude = models.FloatField()
     longitude = models.FloatField()
+
+    def clean(self):
+        if not (-90 <= self.latitude <= 90):
+            raise ValidationError({'latitude': 'Latitude must be in the [-90; 90] range'})
+        if not (-180 <= self.longitude <= 180):
+            raise ValidationError({'longitude': 'Longitude must be in the [-180; 180] range'})
 
 class CollectibleItem(models.Model):
     name = models.CharField(max_length=140)
