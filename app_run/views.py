@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl import load_workbook
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.decorators import api_view
 from rest_framework.filters import OrderingFilter
 from rest_framework.filters import SearchFilter
@@ -140,6 +140,13 @@ class PositionsViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.is_valid(raise_exception=True)
         instance = serializer.save()
+
+        latitude = serializer.validated_data.get("latitude")
+        longitude = serializer.validated_data.get("longitude")
+        if not (-90 <= latitude <= 90):
+            raise serializers.ValidationError({"latitude": f"Invalid latitude: {latitude}"})
+        if not (-180 <= longitude <= 180):
+            raise serializers.ValidationError({"longitude": f"Invalid longitude: {longitude}"})
 
         collect_item_if_nearby(
             latitude=serializer.validated_data.get('latitude'),
