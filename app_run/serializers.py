@@ -27,15 +27,6 @@ class UserSerializerLong(UserSerializerBase):
         return obj.runs.filter(status=Run.Status.FINISHED).count()
 
 
-class UserSerializerDetail(UserSerializerLong):
-    items = serializers.PrimaryKeyRelatedField(source='collectible_items', many=True,
-                                               queryset=CollectibleItem.objects.all())
-
-    class Meta(UserSerializerLong.Meta):
-        model = get_user_model()
-        fields = UserSerializerLong.Meta.fields + ('items',)
-
-
 class RunSerializer(serializers.ModelSerializer):
     athlete_data = UserSerializerBase(source='athlete', read_only=True)
 
@@ -73,3 +64,11 @@ class CollectibleItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CollectibleItem
         fields = '__all__'
+
+
+class UserSerializerDetail(UserSerializerLong):
+    items = CollectibleItemSerializer(many=True, read_only=True, source='collectible_items')
+
+    class Meta(UserSerializerLong.Meta):
+        model = get_user_model()
+        fields = UserSerializerLong.Meta.fields + ('items',)

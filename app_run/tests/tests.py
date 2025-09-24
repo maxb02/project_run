@@ -420,3 +420,11 @@ class CollectItemNearbyUnitTestCase(APITestCase):
                                                                      }, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(self.user.collectible_items.count(), 1)
+
+    def test_endpoint_user_collectible_item(self):
+        self.user.collectible_items.add(self.item)
+        response = self.client.get(reverse('users-detail', args=[self.user.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("items", response.json())
+        self.assertIsInstance(response.json().get("items"), list)
+        self.assertIsInstance(response.json().get("items")[0], dict)
