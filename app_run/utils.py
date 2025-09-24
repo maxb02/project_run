@@ -39,7 +39,7 @@ def collect_item_if_nearby(latitude, longitude, user):
             distance = geodesic((latitude, longitude), (item.latitude, item.longitude)).meters
         except ValueError:
             continue
-        if distance and distance <= 100:
+        if distance <= 100:
             collected_items.append(item)
     user.collectible_items.add(*collected_items)
     return collected_items
