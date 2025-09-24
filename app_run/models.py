@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.core.exceptions import ValidationError
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
+
+from app_run.validators import latitude_validator, longitude_validator
 
 
 class Run(models.Model):
@@ -35,22 +36,18 @@ class Challenge(models.Model):
     full_name = models.CharField(max_length=55, choices=NameChoices.choices, default=NameChoices.RUN10)
     athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='challenges')
 
+
 class Positions(models.Model):
     run = models.ForeignKey(Run, on_delete=models.CASCADE, related_name='positions')
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(validators=[latitude_validator])
+    longitude = models.FloatField(validators=[longitude_validator])
 
-    def clean(self):
-        if not (-90 <= self.latitude <= 90):
-            raise ValidationError({'latitude': 'Latitude must be in the [-90; 90] range'})
-        if not (-180 <= self.longitude <= 180):
-            raise ValidationError({'longitude': 'Longitude must be in the [-180; 180] range'})
 
 class CollectibleItem(models.Model):
     name = models.CharField(max_length=140)
     uid = models.CharField(max_length=140)
-    latitude = models.FloatField()
-    longitude = models.FloatField()
+    latitude = models.FloatField(validators=[latitude_validator])
+    longitude = models.FloatField(validators=[longitude_validator])
     picture = models.URLField()
     value = models.IntegerField()
     user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='collectible_items', blank=True,
