@@ -13,7 +13,7 @@ from rest_framework.views import APIView
 from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
 from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer, \
     PositionsSerializer, CollectibleItemSerializer, UserSerializerDetail
-from app_run.utils import award_challenge_if_completed_run_10
+from app_run.utils import award_challenge_if_completed_run_10, calculate_run_time_in_seconds
 from .utils import calculate_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
 
 
@@ -58,6 +58,7 @@ class RunStopView(APIView):
         run = get_object_or_404(Run, id=id)
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
+            run.run_time_seconds = calculate_run_time_in_seconds(run)
             run.save()
             award_challenge_if_completed_run_10(athlete_id=run.athlete.id)
             calculate_run_distance(run_id=id)

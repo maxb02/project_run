@@ -10,7 +10,7 @@ from rest_framework.test import APITestCase
 
 from app_run.models import CollectibleItem
 from app_run.models import Run, Challenge, Positions
-from app_run.utils import calculate_run_distance, award_challenge_if_completed_run_50km
+from app_run.utils import calculate_run_distance, award_challenge_if_completed_run_50km, calculate_run_time_in_seconds
 from app_run.utils import collect_item_if_nearby
 
 
@@ -428,3 +428,98 @@ class CollectItemNearbyUnitTestCase(APITestCase):
         self.assertIn("items", response.json())
         self.assertIsInstance(response.json().get("items"), list)
         self.assertIsInstance(response.json().get("items")[0], dict)
+
+
+class RunTimeTestCase(APITestCase):
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+        self.run_in_progress = Run.objects.create(athlete=self.user,
+                                                  comment='Test Run 1',
+                                                  status=Run.Status.IN_PROGRESS)
+
+    def test_position_endpoint_run_time_field(self):
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': 11,
+                                                                     'longitude': 22,
+                                                                     'date_time': '2024-10-12T14:30:15.123456',
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        response = self.client.get(reverse('positions-detail', args=[1]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.json().get('date_time'), '2024-10-12T14:30:15.123456')
+
+    def test_calculate_run_time_in_seconds(self):
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11,
+            longitude=22,
+            date_time='2024-10-12T14:30:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.1,
+            longitude=22.1,
+            date_time='2024-10-12T14:31:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.2,
+            longitude=22.2,
+            date_time='2024-10-12T14:42:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.1,
+            longitude=22.1,
+            date_time='2024-10-12T14:35:15.123456',
+
+        )
+
+        result = calculate_run_time_in_seconds(self.run_in_progress)
+        self.assertEqual(result, 720)
+
+    def test_run_endpoint_run_time_seconds_field(self):
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11,
+            longitude=22,
+            date_time='2024-10-12T14:30:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.1,
+            longitude=22.1,
+            date_time='2024-10-12T14:31:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.2,
+            longitude=22.2,
+            date_time='2024-10-12T14:42:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=11.1,
+            longitude=22.1,
+            date_time='2024-10-12T14:35:15.123456',
+
+        )
+
+        response = self.client.post(reverse('run-stop', args=[self.run_in_progress.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        response = self.client.get(reverse('runs-detail', args=[self.run_in_progress.id]))
+        self.assertIn('run_time_seconds', response.json())
+        self.assertEqual(response.json().get('run_time_seconds'), 720)

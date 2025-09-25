@@ -1,5 +1,5 @@
 from django.contrib.auth import get_user_model
-from django.db.models.aggregates import Sum
+from django.db.models.aggregates import Sum, Min, Max
 from geopy.distance import geodesic
 
 from .models import Challenge, Run, Positions, CollectibleItem
@@ -43,3 +43,10 @@ def collect_item_if_nearby(latitude, longitude, user):
             collected_items.append(item)
     user.collectible_items.add(*collected_items)
     return collected_items
+
+
+def calculate_run_time_in_seconds(run):
+    result = run.positions.aggregate(min_date=Min("date_time"),
+                                     max_date=Max("date_time"),
+                                     )
+    return int((result['max_date'] - result['min_date']).total_seconds())
