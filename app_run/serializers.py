@@ -12,7 +12,9 @@ class UserSerializerBase(serializers.ModelSerializer):
 
 class UserSerializerLong(UserSerializerBase):
     type = serializers.SerializerMethodField()
-    runs_finished = serializers.SerializerMethodField()
+    runs_finished = serializers.IntegerField(read_only=True)
+
+
 
     class Meta(UserSerializerBase.Meta):
         model = get_user_model()
@@ -22,9 +24,6 @@ class UserSerializerLong(UserSerializerBase):
         if obj.is_staff:
             return 'coach'
         return 'athlete'
-
-    def get_runs_finished(self, obj):
-        return obj.runs.filter(status=Run.Status.FINISHED).count()
 
 
 class RunSerializer(serializers.ModelSerializer):

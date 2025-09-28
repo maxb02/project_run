@@ -1,4 +1,6 @@
 from django.contrib.auth import get_user_model
+from django.db.models import Q
+from django.db.models.aggregates import Count
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from openpyxl import load_workbook
@@ -80,6 +82,9 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
+        qs = qs.annotate(
+            runs_finished=Count('runs', filter=Q(runs__status=Run.Status.FINISHED)))
+
         user_type = self.request.query_params.get('type', None)
         if user_type == 'coach':
             return qs.filter(is_staff=True)

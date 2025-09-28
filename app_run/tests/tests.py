@@ -130,64 +130,76 @@ class PositionsEndpointTest(APITestCase):
     def test_position_longitude_validation(self):
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -181,
-                                                                     'latitude': 22})
+                                                                     'latitude': 22,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': 181,
-                                                                     'latitude': 22})
+                                                                     'latitude': 22,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -180,
-                                                                     'latitude': 22})
+                                                                     'latitude': 22,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': 180,
-                                                                     'latitude': 22})
+                                                                     'latitude': 22,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_position_latitude_validation(self):
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -33,
-                                                                     'latitude': -91})
+                                                                     'latitude': -91,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': 33,
-                                                                     'latitude': 91})
+                                                                     'latitude': 91,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -58.3702,
-                                                                     'latitude': -234434.6083})
+                                                                     'latitude': -234434.6083,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -180,
-                                                                     'latitude': 90})
+                                                                     'latitude': 90,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -180,
-                                                                     'latitude': -90})
+                                                                     'latitude': -90,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
     def test_position_run_validation(self):
         response = self.client.post(reverse('positions-list'), data={'run': self.run_init.id,
                                                                      'longitude': -33,
-                                                                     'latitude': -33})
+                                                                     'latitude': -33,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_finished.id,
                                                                      'longitude': -33,
-                                                                     'latitude': -33})
+                                                                     'latitude': -33,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'longitude': -33,
-                                                                     'latitude': -33})
+                                                                     'latitude': -33,
+                                                                     'date_time': '2024-10-12T14:42:15.123456', })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
 
 
@@ -403,13 +415,16 @@ class CollectItemNearbyUnitTestCase(APITestCase):
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'latitude': self.DISTANCE_150_METER[0],
                                                                      'longitude': self.DISTANCE_150_METER[1],
+                                                                     'date_time': '2024-10-12T14:42:15.123456',
                                                                      })
+
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.user.collectible_items.count(), 0)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'latitude': self.DISTANCE_50_METER[0],
                                                                      'longitude': self.DISTANCE_50_METER[1],
+                                                                     'date_time': '2024-10-12T14:42:15.123456',
                                                                      })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(self.user.collectible_items.count(), 1)

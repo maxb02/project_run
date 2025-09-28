@@ -49,4 +49,6 @@ def calculate_run_time_in_seconds(run):
     result = run.positions.aggregate(min_date=Min("date_time"),
                                      max_date=Max("date_time"),
                                      )
-    return int((result['max_date'] - result['min_date']).total_seconds())
+    if result['min_date'] and result['max_date']:
+        return int((result['max_date'] - result['min_date']).total_seconds())
+    return None
