@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
 from django.db.models import Q
-from django.db.models.aggregates import Count
+from django.db.models.aggregates import Count, Avg
+from django.db.models.functions import Round
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from geopy.distance import geodesic
 from openpyxl import load_workbook
 from rest_framework import viewsets, status
 from rest_framework.decorators import api_view
@@ -57,10 +59,13 @@ class RunStarView(APIView):
 
 class RunStopView(APIView):
     def post(self, request, id):
-        run = get_object_or_404(Run, id=id)
+        # noinspection PyTypeChecker
+        run = get_object_or_404(Run.objects.annotate(speed_avg=Round(Avg("positions__speed"), 2))
+                                , id=id)
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
             run.run_time_seconds = calculate_run_time_in_seconds(run)
+            run.speed = run.speed_avg
             run.save()
             award_challenge_if_completed_run_10(athlete_id=run.athlete.id)
             calculate_run_distance(run_id=id)
@@ -144,11 +149,33 @@ class PositionsViewSet(viewsets.ModelViewSet):
     serializer_class = PositionsSerializer
 
     def perform_create(self, serializer):
-        serializer.is_valid(raise_exception=True)
-        instance = serializer.save()
+        latitude = serializer.validated_data.get('latitude')
+        longitude = serializer.validated_data.get('longitude')
+
+        run = serializer.validated_data.get('run')
+        previous_position = Positions.objects.filter(run=run).order_by('-id').first()
+
+        position_distance = None
+        speed = None
+        if previous_position:
+            distance_to_previous = round(geodesic((latitude, longitude),
+                                                  (previous_position.latitude, previous_position.longitude)).meters, 2)
+            if previous_position.distance:
+                position_distance = previous_position.distance + distance_to_previous
+            else:
+                position_distance = distance_to_previous
+
+            time_from_previous = (
+                        serializer.validated_data.get('date_time') - previous_position.date_time).total_seconds()
+
+            if time_from_previous:
+                speed = round(distance_to_previous / time_from_previous, 2)
+
+        instance = serializer.save(distance=position_distance,
+                                   speed=speed)
         collect_item_if_nearby(
-            latitude=serializer.validated_data.get('latitude'),
-            longitude=serializer.validated_data.get('longitude'),
+            latitude=latitude,
+            longitude=longitude,
             user=instance.run.athlete
         )
 

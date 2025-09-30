@@ -34,7 +34,7 @@ class ChallengeRun10Test(APITestCase):
         self.assertEqual(Challenge.objects.count(), 0)
 
         for i in range(1, 11):
-            response = self.client.post(reverse('run-stop', args=[i]), data={})
+            response = self.client.post(reverse('run-stop', args=[i]))
             self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Challenge.objects.filter(athlete=self.user).count(), 1)
         self.assertEqual(Run.objects.filter(status=Run.Status.FINISHED).count(), 10)
@@ -538,3 +538,136 @@ class RunTimeTestCase(APITestCase):
         response = self.client.get(reverse('runs-detail', args=[self.run_in_progress.id]))
         self.assertIn('run_time_seconds', response.json())
         self.assertEqual(response.json().get('run_time_seconds'), 720)
+
+
+class TestPositionDistanceCalculation(APITestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+        self.run_in_progress = Run.objects.create(athlete=self.user,
+                                                  comment='Test Run 1',
+                                                  status=Run.Status.IN_PROGRESS)
+
+    # def test_calculate_distance(self):
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                              latitude=11,
+    #                                              longitude=22,)
+    #     self.assertEqual(result, None)
+    #     Positions.objects.create(
+    #         run=self.run_in_progress,
+    #         latitude=45.0000,
+    #         longitude=25.0000,
+    #         date_time='2024-10-12T14:30:15.123456',
+    #
+    #     )
+    #
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                                       latitude=45.0000,
+    #                                                       longitude=25.0031, )
+    #     self.assertEqual(result, 244.43)
+    #     Positions.objects.create(
+    #         run=self.run_in_progress,
+    #         latitude=45.0000,
+    #         longitude=25.0031,
+    #         date_time='2024-10-12T14:30:15.123456',
+    #         distance=244.43,
+    #     )
+    #
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                                       latitude=45.0000,
+    #                                                       longitude=25.0095, )
+    #     self.assertEqual(result, 749.05)
+
+    def test_calculate_distance_in_position_create_endpoint(self):
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': 45.0000,
+                                                                     'longitude': 25.0000,
+                                                                     'date_time': '2024-10-12T14:35:15.123456',
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Positions.objects.last().distance, None)
+
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': 45.0000,
+                                                                     'longitude': 25.0031,
+                                                                     'date_time': '2024-10-12T14:36:15.123456',
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Positions.objects.last().distance, 244.43)
+
+        response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+                                                                     'latitude': 45.0000,
+                                                                     'longitude': 25.0095,
+                                                                     'date_time': '2024-10-12T14:38:15.123456',
+
+                                                                     })
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(Positions.objects.last().distance, 749.05)
+
+        response = self.client.post(reverse('run-stop', args=[self.run_in_progress.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(Run.objects.last().speed, 4.14)
+
+    #
+    #
+    # def test_calculate_speed_beetwen_posipion(self):
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                              latitude=11,
+    #                                              longitude=22,)
+    #     self.assertEqual(result, None)
+    #     Positions.objects.create(
+    #         run=self.run_in_progress,
+    #         latitude=45.0000,
+    #         longitude=25.0000,
+    #         date_time='2024-10-12T14:30:15.123456',
+    #
+    #     )
+    #
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                                       latitude=45.0000,
+    #                                                       longitude=25.0031, )
+    #     self.assertEqual(result, 244.43)
+    #     Positions.objects.create(
+    #         run=self.run_in_progress,
+    #         latitude=45.0000,
+    #         longitude=25.0031,
+    #         date_time='2024-10-12T14:30:15.123456',
+    #         distance=244.43,
+    #     )
+    #
+    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
+    #                                                       latitude=45.0000,
+    #                                                       longitude=25.0095, )
+    #     self.assertEqual(result, 749.05)
+    # #
+    # def test_calculate_distance_in_position_create_endpoint(self):
+    #
+    #     response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+    #                                                                  'latitude': 45.0000,
+    #                                                                  'longitude': 25.0000,
+    #                                                                  'date_time':'2024-10-12T14:35:15.123456',
+    #                                                                  })
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #     self.assertEqual(Positions.objects.last().distance, None)
+    #
+    #     response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+    #                                                                  'latitude': 45.0000,
+    #                                                                  'longitude':25.0031,
+    #                                                                  'date_time':'2024-10-12T14:36:15.123456',
+    #     })
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #     self.assertEqual(Positions.objects.last().distance, 244.43)
+    #
+    #
+    #     response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
+    #                                                                  'latitude': 45.0000,
+    #                                                                  'longitude': 25.0095,
+    #                                                                  'date_time': '2024-10-12T14:38:15.123456',
+    #
+    #                                                                  })
+    #     self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+    #     self.assertEqual(Positions.objects.last().distance, 749.05)
