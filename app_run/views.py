@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.db.models.aggregates import Count, Avg
@@ -60,8 +61,10 @@ class RunStarView(APIView):
 class RunStopView(APIView):
     def post(self, request, id):
         # noinspection PyTypeChecker
-        run = get_object_or_404(Run.objects.annotate(speed_avg=Round(Avg("positions__speed"), 2))
-                                , id=id)
+        run = get_object_or_404(
+            Run.objects.annotate(
+                speed_avg=Round(Avg('positions__speed', filter=~Q(positions__speed=0)), 2)),
+            id=id)
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
             run.run_time_seconds = calculate_run_time_in_seconds(run)
@@ -103,7 +106,6 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
             return UserSerializerDetail
         else:
             return UserSerializerLong
-
 
 
 class AthleteInfoView(APIView):
@@ -156,7 +158,7 @@ class PositionsViewSet(viewsets.ModelViewSet):
         previous_position = Positions.objects.filter(run=run).order_by('-id').first()
 
         position_distance = None
-        speed = None
+        speed = 0
         if previous_position:
             distance_to_previous = round(geodesic((latitude, longitude),
                                                   (previous_position.latitude, previous_position.longitude)).meters, 2)
@@ -166,7 +168,7 @@ class PositionsViewSet(viewsets.ModelViewSet):
                 position_distance = distance_to_previous
 
             time_from_previous = (
-                        serializer.validated_data.get('date_time') - previous_position.date_time).total_seconds()
+                    serializer.validated_data.get('date_time') - previous_position.date_time).total_seconds()
 
             if time_from_previous:
                 speed = round(distance_to_previous / time_from_previous, 2)
@@ -186,10 +188,11 @@ class PositionsViewSet(viewsets.ModelViewSet):
             return qs.filter(run_id=run_id)
         return qs
 
+
 @api_view(['POST'])
 def upload_file(request):
     file = request.FILES.get('file')
-    EXPECTED_HEADERS = ['Name','UID', 'Value', 'Latitude', 'Longitude', 'URL']
+    EXPECTED_HEADERS = ['Name', 'UID', 'Value', 'Latitude', 'Longitude', 'URL']
     wb = load_workbook(file)
     ws = wb.active
 
@@ -220,7 +223,7 @@ def upload_file(request):
             invalid_rows.append(row)
     return Response(invalid_rows)
 
+
 class CollectibleItemViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CollectibleItemSerializer
     queryset = CollectibleItem.objects.all()
-
