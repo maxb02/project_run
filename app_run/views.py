@@ -157,7 +157,7 @@ class PositionsViewSet(viewsets.ModelViewSet):
         run = serializer.validated_data.get('run')
         previous_position = Positions.objects.filter(run=run).order_by('-id').first()
 
-        position_distance = None
+        position_distance = 0
         speed = 0
         if previous_position:
             distance_to_previous = round(geodesic((latitude, longitude),
