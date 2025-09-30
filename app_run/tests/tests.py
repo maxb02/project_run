@@ -589,7 +589,7 @@ class TestPositionDistanceCalculation(APITestCase):
                                                                      'date_time': '2024-10-12T14:35:15.123456',
                                                                      })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Positions.objects.last().distance, None)
+        self.assertEqual(Positions.objects.last().distance, 0)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'latitude': 45.0000,
@@ -597,7 +597,7 @@ class TestPositionDistanceCalculation(APITestCase):
                                                                      'date_time': '2024-10-12T14:36:15.123456',
                                                                      })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Positions.objects.last().distance, 244.43)
+        self.assertEqual(Positions.objects.last().distance, 0.24)
 
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'latitude': 45.0000,
@@ -606,7 +606,7 @@ class TestPositionDistanceCalculation(APITestCase):
 
                                                                      })
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(Positions.objects.last().distance, 749.05)
+        self.assertEqual(Positions.objects.last().distance, 0.74)
 
         response = self.client.post(reverse('run-stop', args=[self.run_in_progress.id]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)

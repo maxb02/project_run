@@ -161,7 +161,8 @@ class PositionsViewSet(viewsets.ModelViewSet):
         speed = 0
         if previous_position:
             distance_to_previous = round(geodesic((latitude, longitude),
-                                                  (previous_position.latitude, previous_position.longitude)).meters, 2)
+                                                  (previous_position.latitude, previous_position.longitude)).kilometers,
+                                         2)
             if previous_position.distance:
                 position_distance = previous_position.distance + distance_to_previous
             else:
@@ -171,7 +172,7 @@ class PositionsViewSet(viewsets.ModelViewSet):
                     serializer.validated_data.get('date_time') - previous_position.date_time).total_seconds()
 
             if time_from_previous:
-                speed = round(distance_to_previous / time_from_previous, 2)
+                speed = round(distance_to_previous * 1000 / time_from_previous, 2)
 
         instance = serializer.save(distance=position_distance,
                                    speed=speed)
