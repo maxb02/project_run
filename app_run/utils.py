@@ -52,13 +52,3 @@ def calculate_run_time_in_seconds(run):
     if result['min_date'] and result['max_date']:
         return int((result['max_date'] - result['min_date']).total_seconds())
     return None
-
-
-def calculate_distance_for_previous_position(previous_position, latitude, longitude):
-    if previous_position:
-        distance_to_previous = round(geodesic((latitude, longitude),
-                                              (previous_position.latitude, previous_position.longitude)).meters, 2)
-        if previous_position.distance:
-            return previous_position.distance + distance_to_previous
-        return distance_to_previous
-    return None
