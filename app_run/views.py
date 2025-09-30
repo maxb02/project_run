@@ -63,7 +63,7 @@ class RunStopView(APIView):
         # noinspection PyTypeChecker
         run = get_object_or_404(
             Run.objects.annotate(
-                speed_avg=Round(Avg('positions__speed', filter=~Q(positions__speed=0)), 2)),
+                speed_avg=Round(Avg('positions__speed'), 2)),
             id=id)
         if run.status == Run.Status.IN_PROGRESS:
             run.status = Run.Status.FINISHED
