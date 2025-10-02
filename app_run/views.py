@@ -71,10 +71,10 @@ class RunStopView(APIView):
             run.speed = run.speed_avg
             run.save()
             award_challenge_if_completed_run_10(athlete_id=run.athlete.id)
-            calculate_and_save_run_distance(run_id=id)
+            distance = calculate_and_save_run_distance(run_id=id)
             award_challenge_if_completed_run_50km(athlete_id=run.athlete.id)
 
-            if run.distance >= 2 and run.run_time_seconds <= 600:
+            if distance >= 2 and run.run_time_seconds <= 600:
                 Challenge.objects.create(athlete=run.athlete, full_name=Challenge.NameChoices.RUN2KMIN10M)
 
             return Response({'message':

@@ -10,7 +10,8 @@ from rest_framework.test import APITestCase
 
 from app_run.models import CollectibleItem
 from app_run.models import Run, Challenge, Positions
-from app_run.utils import calculate_run_distance, award_challenge_if_completed_run_50km, calculate_run_time_in_seconds
+from app_run.utils import calculate_and_save_run_distance, award_challenge_if_completed_run_50km, \
+    calculate_run_time_in_seconds
 from app_run.utils import collect_item_if_nearby
 
 
@@ -222,7 +223,7 @@ class CalculateDistanceRun(APITestCase):
         self.distance = 866.4554329098687
 
     def test_calculate_distance(self):
-        distance = calculate_run_distance(self.run.id)
+        distance = calculate_and_save_run_distance(self.run.id)
         self.assertEqual(distance, 866.4554329098687)
         run = Run.objects.get(id=self.run.id)
         self.assertEqual(run.distance, 866.4554329098687)
@@ -552,36 +553,6 @@ class TestPositionDistanceCalculation(APITestCase):
                                                   comment='Test Run 1',
                                                   status=Run.Status.IN_PROGRESS)
 
-    # def test_calculate_distance(self):
-    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
-    #                                              latitude=11,
-    #                                              longitude=22,)
-    #     self.assertEqual(result, None)
-    #     Positions.objects.create(
-    #         run=self.run_in_progress,
-    #         latitude=45.0000,
-    #         longitude=25.0000,
-    #         date_time='2024-10-12T14:30:15.123456',
-    #
-    #     )
-    #
-    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
-    #                                                       latitude=45.0000,
-    #                                                       longitude=25.0031, )
-    #     self.assertEqual(result, 244.43)
-    #     Positions.objects.create(
-    #         run=self.run_in_progress,
-    #         latitude=45.0000,
-    #         longitude=25.0031,
-    #         date_time='2024-10-12T14:30:15.123456',
-    #         distance=244.43,
-    #     )
-    #
-    #     result = calculate_distance_for_previous_position(self.run_in_progress.id,
-    #                                                       latitude=45.0000,
-    #                                                       longitude=25.0095, )
-    #     self.assertEqual(result, 749.05)
-
     def test_calculate_distance_in_position_create_endpoint(self):
         response = self.client.post(reverse('positions-list'), data={'run': self.run_in_progress.id,
                                                                      'latitude': 45.0000,
@@ -611,3 +582,39 @@ class TestPositionDistanceCalculation(APITestCase):
         response = self.client.post(reverse('run-stop', args=[self.run_in_progress.id]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Run.objects.last().speed, 2.72)
+
+
+class TestChallenge2KmIn10Minutes(APITestCase):
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+
+        )
+        self.run_in_progress = Run.objects.create(athlete=self.user,
+                                                  comment='Test Run 1',
+                                                  status=Run.Status.IN_PROGRESS)
+
+    def test_challenge_2_km_in_10_minutes_achieve(self):
+        # distance ~2.5 km, time delta 9 minutes
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=44.4268,
+            longitude=26.1025,
+            date_time='2024-10-12T14:00:15.123456',
+
+        )
+        Positions.objects.create(
+            run=self.run_in_progress,
+            latitude=44.4268,
+            longitude=26.1325,
+            date_time='2024-10-12T14:09:15.123456',
+
+        )
+        response = self.client.post(reverse('run-stop', args=[self.run_in_progress.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        challenges = self.user.challenges.all()
+        self.assertEqual(challenges.count(), 1)
+        self.assertEqual(challenges.first().full_name, 'run2kmin10m')
