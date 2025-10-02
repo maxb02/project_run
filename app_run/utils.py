@@ -21,7 +21,7 @@ def award_challenge_if_completed_run_50km(athlete_id):
     return None
 
 
-def calculate_run_distance(run_id):
+def calculate_and_save_run_distance(run_id):
     positions = Positions.objects.filter(run_id=run_id).order_by('id').values_list('latitude', 'longitude')
 
     total_distance = sum(

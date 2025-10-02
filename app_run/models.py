@@ -34,6 +34,7 @@ class Challenge(models.Model):
     class NameChoices(models.TextChoices):
         RUN10 = 'run10', 'Сделай 10 Забегов!'
         RUN50KM = 'run50km', 'Пробеги 50 километров!'
+        RUN2KMIN10M = 'run2kmin10m', '2 километра за 10 минут!'
 
     full_name = models.CharField(max_length=55, choices=NameChoices.choices, default=NameChoices.RUN10)
     athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='challenges')

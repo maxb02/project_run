@@ -19,7 +19,7 @@ from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleIt
 from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer, \
     PositionsSerializer, CollectibleItemSerializer, UserSerializerDetail
 from app_run.utils import award_challenge_if_completed_run_10, calculate_run_time_in_seconds
-from .utils import calculate_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
+from .utils import calculate_and_save_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
 
 
 @api_view(['GET'])
@@ -71,8 +71,12 @@ class RunStopView(APIView):
             run.speed = run.speed_avg
             run.save()
             award_challenge_if_completed_run_10(athlete_id=run.athlete.id)
-            calculate_run_distance(run_id=id)
+            calculate_and_save_run_distance(run_id=id)
             award_challenge_if_completed_run_50km(athlete_id=run.athlete.id)
+
+            if run.distance >= 2 and run.run_time_seconds <= 600:
+                Challenge.objects.create(athlete=run.athlete, full_name=Challenge.NameChoices.RUN2KMIN10M)
+
             return Response({'message':
                                  'Run has finished'},
                             status=status.HTTP_200_OK)
