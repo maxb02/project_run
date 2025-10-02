@@ -618,3 +618,51 @@ class TestChallenge2KmIn10Minutes(APITestCase):
         challenges = self.user.challenges.all()
         self.assertEqual(challenges.count(), 1)
         self.assertEqual(challenges.first().full_name, 'run2kmin10m')
+
+
+class TestChallengeSummary(APITestCase):
+    def setUp(self):
+        self.users = [get_user_model().objects.create_user(
+            username=f'testuser{i}',
+            first_name=f'Firstname-{i}',
+            last_name=f'Lastname-{i}',
+            password='password123',
+            email=f'test{1}@example.com',
+
+        ) for i in range(5)]
+
+        Challenge.objects.create(
+            athlete=self.users[0],
+            full_name=Challenge.NameChoices.RUN10
+        )
+        Challenge.objects.create(
+            athlete=self.users[0],
+            full_name=Challenge.NameChoices.RUN50KM
+        )
+        Challenge.objects.create(
+            athlete=self.users[0],
+            full_name=Challenge.NameChoices.RUN2KMIN10M
+        )
+
+        Challenge.objects.create(
+            athlete=self.users[1],
+            full_name=Challenge.NameChoices.RUN2KMIN10M
+        )
+
+        Challenge.objects.create(
+            athlete=self.users[2],
+            full_name=Challenge.NameChoices.RUN2KMIN10M
+        )
+        Challenge.objects.create(
+            athlete=self.users[3],
+            full_name=Challenge.NameChoices.RUN50KM
+        )
+        Challenge.objects.create(
+            athlete=self.users[3],
+            full_name=Challenge.NameChoices.RUN2KMIN10M
+        )
+
+    def test_list_endpoint(self):
+        with self.assertNumQueries(1):
+            response = self.client.get(reverse('challenges-summary'))
+            self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db.models import Q
@@ -232,3 +234,24 @@ def upload_file(request):
 class CollectibleItemViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = CollectibleItemSerializer
     queryset = CollectibleItem.objects.all()
+
+
+@api_view(['GET'])
+def challenge_summary(request):
+    challenges = Challenge.objects.select_related('athlete').all()
+    challenges_dict = defaultdict(list)
+    for challenge in challenges:
+        challenges_dict[challenge.get_full_name_display()].append({
+            'id': challenge.athlete.id,
+            'username': challenge.athlete.username,
+            'full_name': challenge.athlete.get_full_name(),
+        })
+
+    data = []
+    for key, value in challenges_dict.items():
+        data.append({
+            'name_to_display': key,
+            'athletes': value
+        })
+
+    return Response(data, status=status.HTTP_200_OK)
