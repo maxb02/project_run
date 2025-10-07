@@ -278,7 +278,11 @@ def subscribe_coach(request, coach_id):
     else:
         return Response({'message': 'athlete field is required '}, status=status.HTTP_400_BAD_REQUEST)
 
-    coach = get_object_or_404(User, id=coach_id, is_staff=True)
+    coach = get_object_or_404(User, id=coach_id)
+    if not coach.is_staff:
+        return Response(
+            {'message': f'User is not a coach'},
+            status=status.HTTP_400_BAD_REQUEST)
 
     try:
         Subscribe.objects.create(subscriber=athlete, subscribed_to=coach)

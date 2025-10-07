@@ -781,7 +781,7 @@ class TestCoachSubscription(APITestCase):
                                         'athlete': self.test_user.id,
                                     }
                                     )
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_coach_subscription_endpoint_ok(self):
         response = self.client.post(reverse('subscribe-coach',
