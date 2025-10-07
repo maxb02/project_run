@@ -8,7 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from app_run.models import CollectibleItem
+from app_run.models import CollectibleItem, Subscribe
 from app_run.models import Run, Challenge, Positions
 from app_run.utils import calculate_and_save_run_distance, award_challenge_if_completed_run_50km, \
     calculate_run_time_in_seconds
@@ -216,10 +216,14 @@ class CalculateDistanceRun(APITestCase):
                                       status=Run.Status.IN_PROGRESS)
         Positions.objects.create(run=self.run,
                                  latitude=41.49008,
-                                 longitude=-71.312796)
+                                 longitude=-71.312796,
+                                 date_time='2024-10-12T14:42:15.123456')
+
+
         Positions.objects.create(run=self.run,
                                  latitude=41.499498,
-                                 longitude=-81.695391)
+                                 longitude=-81.695391,
+                                 date_time='2024-10-12T14:42:15.123456')
         self.distance = 866.4554329098687
 
     def test_calculate_distance(self):
@@ -336,12 +340,69 @@ class CollectibleItemsTest(APITestCase):
         self.assertEqual(set(response.data[0]),
                          {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type'})
 
+        with self.assertNumQueries(1):
+            self.client.get(reverse('users-list'))
+
     def test_endpoint_detail(self):
         response = self.client.get(reverse('users-detail', kwargs={'pk': self.user.id}))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(set(response.data),
                          {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items'})
 
+    def test_endpoint_detail_atlete_subscribed_coach(self):
+        # athlete_user = get_user_model().objects.create(
+        #     username='athlete',
+        #     password='password123',
+        #     email='test@example.com',
+        # )
+        coach_user = get_user_model().objects.create(
+            username='coach',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+        )
+        Subscribe.objects.create(
+            subscriber=coach_user,
+            subscribed_to=self.user,
+        )
+        response = self.client.get(reverse('users-detail', args=(self.user.id,)))
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(response.json())
+        # self.assertEqual(set(response.data),
+        #                  {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items', 'coach'})
+        # self.assertEqual(response.data['coach'], coach_user.id)
+        # todo check query
+        with self.assertNumQueries(1):
+            response = self.client.get(reverse('users-detail', args=[self.user.id]))
+
+    # def test_endpoint_detail_coach_subscribed_atlete(self):
+    #     athlete_user = get_user_model().objects.create(
+    #         username='athlete',
+    #         password='password123',
+    #         email='test@example.com',
+    #     )
+    #     coach_user = get_user_model().objects.create(
+    #         username='coach',
+    #         password='password123',
+    #         email='test@example.com',
+    #         is_staff=True,
+    #     )
+    #     Subscribe.objects.create(
+    #         subscribed_to=coach_user,
+    #         subscriber=athlete_user,
+    #     )
+    #
+    #     response = self.client.get(reverse('users-detail', args=[coach_user.id]))
+    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
+    #     self.assertEqual(set(response.data),
+    #                      {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items', 'athletes'})
+    #     self.assertIsInstance(response.data['athletes'], list)
+    #     self.assertEqual(response.data['athletes'], [athlete_user.id])
+    #
+    # #todo check query
+    #     with self.assertNumQueries(2):
+    #         response = self.client.get(reverse('users-detail', args=[coach_user.id]))
 
 class CollectItemNearbyUnitTestCase(APITestCase):
     def setUp(self):
@@ -666,3 +727,88 @@ class TestChallengeSummary(APITestCase):
         with self.assertNumQueries(1):
             response = self.client.get(reverse('challenges-summary'))
             self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+
+class TestCoachSubscription(APITestCase):
+    def setUp(self):
+        self.test_user = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+
+        self.coach_user = get_user_model().objects.create_user(
+            username='coach_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+
+        )
+
+        self.athlete_user = get_user_model().objects.create_user(
+            username='athlete_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+
+    def test_coach_subscription_endpoint_ok(self):
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.test_user.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_coach_subscription_endpoint_wrong_athlete_id(self):
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.coach_user.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_subscription_endpoint_empty_athlete_id(self):
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': '',
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_subscription_endpoint_wrong_coach_id(self):
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.athlete_user.id]),
+                                    data={
+                                        'athlete': self.test_user.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_coach_subscription_endpoint_ok(self):
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.test_user.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_coach_subscription_endpoint_already_exists(self):
+        Subscribe.objects.create(
+            subscriber=self.test_user,
+            subscribed_to=self.coach_user,
+        )
+        response = self.client.post(reverse('subscribe-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.test_user.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

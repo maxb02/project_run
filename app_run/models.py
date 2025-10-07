@@ -4,6 +4,7 @@ from django.db import models
 
 from app_run.validators import latitude_validator, longitude_validator
 
+User = get_user_model()
 
 class Run(models.Model):
     class Status(models.TextChoices):
@@ -13,7 +14,7 @@ class Run(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
     comment = models.TextField()
-    athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='runs')
+    athlete = models.ForeignKey(User, on_delete=models.CASCADE, related_name='runs')
     status = models.CharField(choices=Status.choices, max_length=11, default=Status.INIT)
     distance = models.FloatField(blank=True, null=True)
     run_time_seconds = models.PositiveIntegerField(blank=True, null=True)
@@ -21,7 +22,7 @@ class Run(models.Model):
 
 
 class AthleteInfo(models.Model):
-    athlete = models.OneToOneField(get_user_model(), on_delete=models.CASCADE, related_name='athlete_info')
+    athlete = models.OneToOneField(User, on_delete=models.CASCADE, related_name='athlete_info')
     weight = models.PositiveSmallIntegerField(null=True, blank=True,
                                               validators=[
                                                   MinValueValidator(1),
@@ -37,7 +38,7 @@ class Challenge(models.Model):
         RUN2KMIN10M = 'run2kmin10m', '2 километра за 10 минут!'
 
     full_name = models.CharField(max_length=55, choices=NameChoices.choices, default=NameChoices.RUN10)
-    athlete = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='challenges')
+    athlete = models.ForeignKey(User, on_delete=models.CASCADE, related_name='challenges')
 
 
 class Positions(models.Model):
@@ -56,5 +57,17 @@ class CollectibleItem(models.Model):
     longitude = models.FloatField(validators=[longitude_validator])
     picture = models.URLField()
     value = models.IntegerField()
-    user = models.ForeignKey(get_user_model(), on_delete=models.CASCADE, related_name='collectible_items', blank=True,
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collectible_items', blank=True,
                              null=True)
+
+
+class Subscribe(models.Model):
+    subscriber = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='subscriptions', null=True, blank=True
+    )
+    subscribed_to = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name='followers', null=True, blank=True
+    )
+
+    class Meta:
+        unique_together = ('subscriber', 'subscribed_to')

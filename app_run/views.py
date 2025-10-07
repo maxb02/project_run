@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.aggregates import Count, Avg
 from django.db.models.functions import Round
@@ -17,9 +18,9 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem
-from app_run.serializers import RunSerializer, UserSerializerLong, AthleteInfoSerializer, ChallengeSerializer, \
-    PositionsSerializer, CollectibleItemSerializer, UserSerializerDetail
+from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem, Subscribe, User
+from app_run.serializers import RunSerializer, UserListSerializer, AthleteInfoSerializer, ChallengeSerializer, \
+    PositionsSerializer, CollectibleItemSerializer, UserDetailSerializer
 from app_run.utils import award_challenge_if_completed_run_10, calculate_run_time_in_seconds
 from .utils import calculate_and_save_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
 
@@ -62,7 +63,6 @@ class RunStarView(APIView):
 
 class RunStopView(APIView):
     def post(self, request, id):
-        # noinspection PyTypeChecker
         run = get_object_or_404(
             Run.objects.annotate(
                 speed_avg=Round(Avg('positions__speed'), 2)),
@@ -88,7 +88,7 @@ class RunStopView(APIView):
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = get_user_model().objects.exclude(is_superuser=True).prefetch_related('runs')
+    queryset = get_user_model().objects.exclude(is_superuser=True)
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
     ordering_fields = ('date_joined',)
@@ -109,9 +109,10 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return UserSerializerDetail
+            return UserDetailSerializer
         else:
-            return UserSerializerLong
+            return UserListSerializer
+
 
 
 class AthleteInfoView(APIView):
@@ -255,3 +256,26 @@ def challenge_summary(request):
         })
 
     return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def subscribe_coach(request, coach_id):
+    athlete_id = request.data.get('athlete', None)
+    if athlete_id:
+        try:
+            athlete = get_user_model().objects.get(id=athlete_id, is_staff=False)
+        except get_user_model().DoesNotExist:
+            return Response({'message': 'Invalid athlete id'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'message': 'athlete field is required '}, status=status.HTTP_400_BAD_REQUEST)
+
+    coach = get_object_or_404(User, id=coach_id, is_staff=True)
+
+    try:
+        Subscribe.objects.create(subscriber=athlete, subscribed_to=coach)
+    except IntegrityError:
+        return Response(
+            {'message': f'Subscribe athlete with id {athlete.id} for coach with id {coach.id} already exists'},
+            status=status.HTTP_400_BAD_REQUEST)
+    return Response({f'message': f'Athlete with id {athlete.id} successfully subscribed coach with id {coach.id}'},
+                    status=status.HTTP_200_OK)
