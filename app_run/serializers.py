@@ -6,7 +6,7 @@ from .models import Run, AthleteInfo, Challenge, Positions, CollectibleItem, Use
 class CollectibleItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = CollectibleItem
-        fields = '__all__'
+        fields = 'name', 'uid', 'latitude', 'longitude', 'picture', 'value'
 
 
 class UserBaseSerializer(serializers.ModelSerializer):

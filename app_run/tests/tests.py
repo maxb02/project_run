@@ -267,7 +267,7 @@ class Run50kmChalengeTest(APITestCase):
         self.assertEqual(self.user.challenges.filter(full_name=Challenge.NameChoices.RUN50KM).count(), 1)
 
 
-class CollectibleItemsFileUplodadTest(APITestCase):
+class CollectibleItemsFileUploadTest(APITestCase):
     def test_file_upload(self):
         self.assertEqual(CollectibleItem.objects.count(), 0)
 
@@ -319,20 +319,19 @@ class CollectibleItemsTest(APITestCase):
             email='test@example.com',
 
         )
-        self.coleectible_item1 = CollectibleItem.objects.create(name='Test1',
+        self.collectible_item1 = CollectibleItem.objects.create(name='Test1',
                                                                 uid='asd',
                                                                 latitude=11,
                                                                 longitude=22,
                                                                 picture='https:\\test.com',
-                                                                value=1,
-                                                                user=self.user)
-        self.coleectible_item2 = CollectibleItem.objects.create(name='Test2',
+                                                                value=1, )
+        self.collectible_item2 = CollectibleItem.objects.create(name='Test2',
                                                                 uid='asd',
                                                                 latitude=11,
                                                                 longitude=22,
                                                                 picture='https:\\test.com',
-                                                                value=3,
-                                                                user=self.user)
+                                                                value=3, )
+        self.user.collectible_items.add(self.collectible_item1, self.collectible_item2)
 
     def test_endpoint_list(self):
         response = self.client.get(reverse('users-list'))
@@ -344,7 +343,7 @@ class CollectibleItemsTest(APITestCase):
             self.client.get(reverse('users-list'))
 
     def test_endpoint_detail(self):
-        response = self.client.get(reverse('users-detail', kwargs={'pk': self.user.id}))
+        response = self.client.get(reverse('users-detail', args=[self.user.id]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(set(response.data),
                          {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items'})

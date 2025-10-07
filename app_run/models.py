@@ -28,7 +28,6 @@ class AthleteInfo(models.Model):
                                                   MinValueValidator(1),
                                                   MaxValueValidator(899)])
     goals = models.CharField(max_length=140, null=True, blank=True)
-    items = models.ManyToManyField('CollectibleItem', blank=True, related_name='athlete_info')
 
 
 class Challenge(models.Model):
@@ -57,8 +56,7 @@ class CollectibleItem(models.Model):
     longitude = models.FloatField(validators=[longitude_validator])
     picture = models.URLField()
     value = models.IntegerField()
-    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='collectible_items', blank=True,
-                             null=True)
+    user = models.ManyToManyField(User, related_name='collectible_items', )
 
 
 class Subscribe(models.Model):
