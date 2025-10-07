@@ -20,7 +20,7 @@ from rest_framework.views import APIView
 
 from app_run.models import Run, AthleteInfo, Challenge, Positions, CollectibleItem, Subscribe, User
 from app_run.serializers import RunSerializer, UserListSerializer, AthleteInfoSerializer, ChallengeSerializer, \
-    PositionsSerializer, CollectibleItemSerializer, UserDetailSerializer
+    PositionsSerializer, CollectibleItemSerializer, CoachDetailSerializer, AthleteDetailSerializer
 from app_run.utils import award_challenge_if_completed_run_10, calculate_run_time_in_seconds
 from .utils import calculate_and_save_run_distance, award_challenge_if_completed_run_50km, collect_item_if_nearby
 
@@ -88,7 +88,10 @@ class RunStopView(APIView):
 
 
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = get_user_model().objects.exclude(is_superuser=True)
+    queryset = (get_user_model().objects.
+                exclude(is_superuser=True).
+                annotate(runs_finished=Count('runs', filter=Q(runs__status=Run.Status.FINISHED))))
+
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
     ordering_fields = ('date_joined',)
@@ -96,8 +99,6 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         qs = super().get_queryset()
-        qs = qs.annotate(
-            runs_finished=Count('runs', filter=Q(runs__status=Run.Status.FINISHED)))
 
         user_type = self.request.query_params.get('type', None)
         if user_type == 'coach':
@@ -107,12 +108,20 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         else:
             return qs
 
+    def get_object(self):
+        obj = super().get_object()
+        if self.action == 'retrieve':
+            self._is_staff = obj.is_staff
+        return obj
+
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return UserDetailSerializer
+            if self._is_staff:
+                return CoachDetailSerializer
+            else:
+                return AthleteDetailSerializer
         else:
             return UserListSerializer
-
 
 
 class AthleteInfoView(APIView):

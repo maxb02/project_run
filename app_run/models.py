@@ -6,6 +6,7 @@ from app_run.validators import latitude_validator, longitude_validator
 
 User = get_user_model()
 
+
 class Run(models.Model):
     class Status(models.TextChoices):
         INIT = 'init', 'Init'
@@ -60,12 +61,8 @@ class CollectibleItem(models.Model):
 
 
 class Subscribe(models.Model):
-    subscriber = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='subscriptions', null=True, blank=True
-    )
-    subscribed_to = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name='followers', null=True, blank=True
-    )
+    subscriber = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions', null=True, blank=True)
+    subscribed_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers', null=True, blank=True)
 
     class Meta:
         unique_together = ('subscriber', 'subscribed_to')

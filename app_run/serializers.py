@@ -36,29 +36,23 @@ class UserDetailSerializer(UserListSerializer):
 
 
 class CoachDetailSerializer(UserDetailSerializer):
-    pass
-    # athletes = serializers.SerializerMethodField()
-    # athletes = serializers.CharField(source='subscribe_athlet', read_only=True)
+    athletes = serializers.SerializerMethodField()
 
-    # class Meta(UserDetailSerializer.Meta):
-    #     fields = UserDetailSerializer.Meta.fields + ('athletes',)
+    class Meta(UserDetailSerializer.Meta):
+        fields = UserDetailSerializer.Meta.fields + ('athletes',)
 
-    # def get_athletes(self, obj):
-    #     return [i.athlete.id for i in obj.subscribed.all()]
+    def get_athletes(self, obj):
+        return list(obj.followers.values_list('subscriber_id', flat=True))
 
 
 class AthleteDetailSerializer(UserDetailSerializer):
-    pass
-    # coach = serializers.SerializerMethodField()
-    # coach = serializers.CharField(source='subscribe_coach', read_only=True)
+    coach = serializers.SerializerMethodField()
 
-    # class Meta(UserDetailSerializer.Meta):
-    #     fields = UserDetailSerializer.Meta.fields + ('coach',)
+    class Meta(UserDetailSerializer.Meta):
+        fields = UserDetailSerializer.Meta.fields + ('coach',)
 
-    # def get_coach(self, obj):
-    #     if obj.subscribes.all():
-    #         return obj.subscribes.first().coach_id
-
+    def get_coach(self, obj):
+        return obj.subscriptions.values_list('subscribed_to', flat=True).first()
 
 class RunSerializer(serializers.ModelSerializer):
     athlete_data = UserBaseSerializer(source='athlete', read_only=True)

@@ -319,19 +319,17 @@ class CollectibleItemsTest(APITestCase):
             email='test@example.com',
 
         )
-        self.collectible_item1 = CollectibleItem.objects.create(name='Test1',
-                                                                uid='asd',
-                                                                latitude=11,
-                                                                longitude=22,
-                                                                picture='https:\\test.com',
-                                                                value=1, )
-        self.collectible_item2 = CollectibleItem.objects.create(name='Test2',
-                                                                uid='asd',
-                                                                latitude=11,
-                                                                longitude=22,
-                                                                picture='https:\\test.com',
-                                                                value=3, )
-        self.user.collectible_items.add(self.collectible_item1, self.collectible_item2)
+        self.items = []
+        for i in range(5):
+            item = CollectibleItem.objects.create(name=f'Test{i}',
+                                                  uid=f'asd{i}',
+                                                  latitude=11 + i,
+                                                  longitude=22 + i,
+                                                  picture='https:\\test.com',
+                                                  value=i, )
+            self.items.append(item)
+
+        self.user.collectible_items.add(*self.items)
 
     def test_endpoint_list(self):
         response = self.client.get(reverse('users-list'))
@@ -342,18 +340,40 @@ class CollectibleItemsTest(APITestCase):
         with self.assertNumQueries(1):
             self.client.get(reverse('users-list'))
 
-    def test_endpoint_detail(self):
-        response = self.client.get(reverse('users-detail', args=[self.user.id]))
+    def test_endpoint_detail_coach(self):
+
+        coach_user = get_user_model().objects.create(
+            username='coach',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+        )
+
+        for i in range(5):
+            user = get_user_model().objects.create(
+                username=f'user{i}',
+                password='password123',
+                email=f'test{i}@example.com',
+                is_staff=False,
+            )
+            Subscribe.objects.create(
+                subscriber=user,
+                subscribed_to=coach_user,
+            )
+        response = self.client.get(reverse('users-detail', args=(coach_user.id,)))
+
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(set(response.data),
-                         {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items'})
+                         {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items',
+                          'athletes'})
+        self.assertIsInstance(response.data['athletes'], list)
+        self.assertEqual(response.data['athletes'], [3, 4, 5, 6, 7])
 
-    def test_endpoint_detail_atlete_subscribed_coach(self):
-        # athlete_user = get_user_model().objects.create(
-        #     username='athlete',
-        #     password='password123',
-        #     email='test@example.com',
-        # )
+        with self.assertNumQueries(3):
+            self.client.get(reverse('users-detail', args=[coach_user.id]))
+
+    def test_endpoint_detail_atlete(self):
+
         coach_user = get_user_model().objects.create(
             username='coach',
             password='password123',
@@ -361,47 +381,20 @@ class CollectibleItemsTest(APITestCase):
             is_staff=True,
         )
         Subscribe.objects.create(
-            subscriber=coach_user,
-            subscribed_to=self.user,
+            subscriber=self.user,
+            subscribed_to=coach_user,
         )
-        response = self.client.get(reverse('users-detail', args=(self.user.id,)))
 
+        response = self.client.get(reverse('users-detail', args=[self.user.id]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(response.json())
-        # self.assertEqual(set(response.data),
-        #                  {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items', 'coach'})
-        # self.assertEqual(response.data['coach'], coach_user.id)
-        # todo check query
-        with self.assertNumQueries(1):
-            response = self.client.get(reverse('users-detail', args=[self.user.id]))
+        self.assertEqual(set(response.data),
+                         {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items',
+                          'coach'})
 
-    # def test_endpoint_detail_coach_subscribed_atlete(self):
-    #     athlete_user = get_user_model().objects.create(
-    #         username='athlete',
-    #         password='password123',
-    #         email='test@example.com',
-    #     )
-    #     coach_user = get_user_model().objects.create(
-    #         username='coach',
-    #         password='password123',
-    #         email='test@example.com',
-    #         is_staff=True,
-    #     )
-    #     Subscribe.objects.create(
-    #         subscribed_to=coach_user,
-    #         subscriber=athlete_user,
-    #     )
-    #
-    #     response = self.client.get(reverse('users-detail', args=[coach_user.id]))
-    #     self.assertEqual(response.status_code, status.HTTP_200_OK)
-    #     self.assertEqual(set(response.data),
-    #                      {'date_joined', 'runs_finished', 'id', 'last_name', 'first_name', 'username', 'type', 'items', 'athletes'})
-    #     self.assertIsInstance(response.data['athletes'], list)
-    #     self.assertEqual(response.data['athletes'], [athlete_user.id])
-    #
-    # #todo check query
-    #     with self.assertNumQueries(2):
-    #         response = self.client.get(reverse('users-detail', args=[coach_user.id]))
+        self.assertEqual(response.data['coach'], coach_user.id)
+
+        with self.assertNumQueries(3):
+            self.client.get(reverse('users-detail', args=[self.user.id]))
 
 class CollectItemNearbyUnitTestCase(APITestCase):
     def setUp(self):
