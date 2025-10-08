@@ -18,9 +18,10 @@ class UserBaseSerializer(serializers.ModelSerializer):
 class UserListSerializer(UserBaseSerializer):
     type = serializers.SerializerMethodField()
     runs_finished = serializers.IntegerField(read_only=True)
+    rating = serializers.FloatField(read_only=True)
 
     class Meta(UserBaseSerializer.Meta):
-        fields = UserBaseSerializer.Meta.fields + ('date_joined', 'type', 'runs_finished')
+        fields = UserBaseSerializer.Meta.fields + ('date_joined', 'type', 'runs_finished', 'rating')
 
     def get_type(self, obj):
         if obj.is_staff:

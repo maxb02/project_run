@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from app_run.validators import latitude_validator, longitude_validator
+from app_run.validators import latitude_validator, longitude_validator, rating_validator
 
 User = get_user_model()
 
@@ -63,6 +63,6 @@ class CollectibleItem(models.Model):
 class Subscribe(models.Model):
     subscriber = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions', null=True, blank=True)
     subscribed_to = models.ForeignKey(User, on_delete=models.CASCADE, related_name='followers', null=True, blank=True)
-
+    rating = models.PositiveSmallIntegerField(null=True, blank=True, validators=[rating_validator])
     class Meta:
         unique_together = ('subscriber', 'subscribed_to')

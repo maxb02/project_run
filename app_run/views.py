@@ -2,6 +2,7 @@ from collections import defaultdict
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Q
 from django.db.models.aggregates import Count, Avg
@@ -90,7 +91,8 @@ class RunStopView(APIView):
 class UserViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = (get_user_model().objects.
                 exclude(is_superuser=True).
-                annotate(runs_finished=Count('runs', filter=Q(runs__status=Run.Status.FINISHED))))
+                annotate(runs_finished=Count('runs', filter=Q(runs__status=Run.Status.FINISHED)),
+                         rating=Avg('followers__rating'), ))
 
     filter_backends = (SearchFilter, OrderingFilter)
     search_fields = 'first_name', 'last_name'
@@ -292,3 +294,38 @@ def subscribe_coach(request, coach_id):
             status=status.HTTP_400_BAD_REQUEST)
     return Response({f'message': f'Athlete with id {athlete.id} successfully subscribed coach with id {coach.id}'},
                     status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+def rate_coach(request, coach_id):
+    athlete_id = request.data.get('athlete', None)
+    if not athlete_id:
+        return Response({'message': 'athlete field is required '}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        athlete = get_user_model().objects.get(id=athlete_id, is_staff=False)
+    except get_user_model().DoesNotExist:
+        return Response({'message': 'Invalid athlete id'}, status=status.HTTP_400_BAD_REQUEST)
+
+    coach = get_object_or_404(User, id=coach_id)
+    if not coach.is_staff:
+        return Response(
+            {'message': f'User is not a coach'},
+            status=status.HTTP_400_BAD_REQUEST)
+
+    rating = request.data.get('rating', None)
+    if not rating:
+        return Response({'message': 'rating field is required '}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        subscribe = Subscribe.objects.get(subscriber=athlete, subscribed_to=coach)
+    except Subscribe.DoesNotExist:
+        return Response({'message': 'Athlete must be subscribed to coach'}, status=status.HTTP_400_BAD_REQUEST)
+
+    subscribe.rating = rating
+    try:
+        subscribe.full_clean()
+    except ValidationError as e:
+        return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    subscribe.save()
+    return Response({f'message': 'Coach was successfully rated'}, status=status.HTTP_200_OK)

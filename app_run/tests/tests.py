@@ -804,3 +804,153 @@ class TestCoachSubscription(APITestCase):
                                     }
                                     )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class TestCoachRating(APITestCase):
+    def setUp(self):
+        self.athlete_user1 = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+
+        self.coach_user = get_user_model().objects.create_user(
+            username='coach_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+
+        )
+
+        self.athlete_user2 = get_user_model().objects.create_user(
+            username='athlete_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+        Subscribe.objects.create(
+            subscriber=self.athlete_user1,
+            subscribed_to=self.coach_user,
+        )
+        Subscribe.objects.create(
+            subscriber=self.athlete_user2,
+            subscribed_to=self.coach_user,
+        )
+
+    def test_coach_rating_endpoint_wrong_athlete_id(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.coach_user.id,
+                                        'rating': 5
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_rating_endpoint_empty_athlete_id(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': '',
+                                        'rating': 5
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_rating_endpoint_empty_rating(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                        'rating': ''
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_rating_endpoint_invalid_rating(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                        'rating': '0'
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                        'rating': 1.5
+                                    })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                        'rating': 6
+                                    })
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_rating_endpoint_wrong_coach_id(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.athlete_user1.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_coach_rating_endpoint_ok(self):
+        response = self.client.post(reverse('rate-coach',
+                                            args=[self.coach_user.id]),
+                                    data={
+                                        'athlete': self.athlete_user1.id,
+                                        'rating': '5'
+                                    }
+                                    )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_coach_rating_field_detail(self):
+        subscribes = Subscribe.objects.all()
+        subscribe = subscribes.first()
+        subscribe.rating = 2
+        subscribe.save()
+
+        subscribe = subscribes.last()
+        subscribe.rating = 5
+        subscribe.save()
+
+        response = self.client.get(reverse('users-detail', args=[self.coach_user.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['rating'], 3.5)
+
+        with self.assertNumQueries(3):
+            self.client.get(reverse('users-detail', args=[self.coach_user.id]))
+
+    def test_coach_rating_field_list(self):
+        subscribes = Subscribe.objects.all()
+        subscribe = subscribes.first()
+        subscribe.rating = 2
+        subscribe.save()
+
+        subscribe = subscribes.last()
+        subscribe.rating = 5
+        subscribe.save()
+
+        response = self.client.get(reverse('users-list', ))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        rating = None
+        for i in response.data:
+            if i['id'] == 2:
+                rating = i['rating']
+                break
+        self.assertEqual(rating, 3.5)
+
+        with self.assertNumQueries(1):
+            self.client.get(reverse('users-list'))
