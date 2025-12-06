@@ -5,7 +5,7 @@ from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
 from django.db.models import Q
-from django.db.models.aggregates import Count, Avg
+from django.db.models.aggregates import Count, Avg, Sum
 from django.db.models.functions import Round
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -329,3 +329,35 @@ def rate_coach(request, coach_id):
         return Response({'message': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     subscribe.save()
     return Response({f'message': 'Coach was successfully rated'}, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+def analytics_for_coach(request, coach_id):
+    coach = get_object_or_404(User, id=coach_id)
+    if not coach.is_staff:
+        return Response(
+            {'message': f'User is not a coach'},
+            status=status.HTTP_400_BAD_REQUEST)
+
+    coach_athlete_runs = Run.objects.filter(athlete__subscriptions__subscribed_to_id=coach_id)
+
+    longest_run = coach_athlete_runs.order_by('-distance').first()
+    total_run = coach_athlete_runs.annotate(total_distance=Sum('distance')).order_by('-total_distance').first()
+
+    speed_avg = coach_athlete_runs.annotate(avg_speed=Avg('speed')).order_by('-avg_speed').first()
+
+    return Response({
+
+        'longest_run_user': longest_run.athlete_id,
+
+        'longest_run_value': longest_run.distance,
+
+        'total_run_user': total_run.athlete_id,
+
+        'total_run_value': total_run.total_distance,
+
+        'speed_avg_user': speed_avg.athlete_id,
+
+        'speed_avg_value': speed_avg.avg_speed,
+
+    }, status=status.HTTP_200_OK)

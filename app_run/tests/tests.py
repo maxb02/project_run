@@ -954,3 +954,80 @@ class TestCoachRating(APITestCase):
 
         with self.assertNumQueries(1):
             self.client.get(reverse('users-list'))
+
+
+class TestAnalyticsForCoach(APITestCase):
+
+    def setUp(self):
+        self.athlete_user1 = get_user_model().objects.create_user(
+            username='testuser',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+
+        self.coach_user = get_user_model().objects.create_user(
+            username='coach_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+
+        )
+
+        self.athlete_user2 = get_user_model().objects.create_user(
+            username='athlete_user',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+        Subscribe.objects.create(
+            subscriber=self.athlete_user1,
+            subscribed_to=self.coach_user,
+        )
+        Subscribe.objects.create(
+            subscriber=self.athlete_user2,
+            subscribed_to=self.coach_user,
+        )
+
+        Run.objects.create(athlete=self.athlete_user1,
+                           comment='Test Run athlete_user1 1',
+                           status=Run.Status.FINISHED,
+                           distance=1,
+                           speed=1
+                           )
+        Run.objects.create(athlete=self.athlete_user1,
+                           comment='Test Run athlete_user1 2',
+                           status=Run.Status.FINISHED,
+                           distance=2,
+                           speed=2
+                           )
+        Run.objects.create(athlete=self.athlete_user2,
+                           comment='Test Run athlete_user2',
+                           status=Run.Status.FINISHED,
+                           distance=3,
+                           speed=3
+                           )
+        Run.objects.create(athlete=self.athlete_user2,
+                           comment='Test Run athlete_user2',
+                           status=Run.Status.FINISHED,
+                           distance=4,
+                           speed=4
+                           )
+
+    def test_analytics_for_coachendpoint(self):
+        response = self.client.get(reverse('analytics-for-coach', args=[self.coach_user.id]))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        print(response.json())
+        self.assertEqual(response.data.get('longest_run_user'), self.athlete_user2.id)
+        self.assertEqual(response.data.get('longest_run_value'), 4)
+
+        self.assertEqual(response.data.get('total_run_user'), 3)
+        self.assertEqual(response.data.get('total_run_value'), 4)
+
+        self.assertEqual(response.data.get('speed_avg_user'), 3)
+        self.assertEqual(response.data.get('speed_avg_value'), 4)
+
+        with self.assertNumQueries(4):
+            self.client.get(reverse('analytics-for-coach', args=[self.coach_user.id]))
