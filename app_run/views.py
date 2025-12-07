@@ -4,10 +4,9 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db.models import Q, FloatField
-from django.db.models import Sum, Value
+from django.db.models import Q
+from django.db.models import Sum
 from django.db.models.aggregates import Count, Avg
-from django.db.models.functions import Coalesce
 from django.db.models.functions import Round
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -348,13 +347,13 @@ def analytics_for_coach(request, coach_id):
         .filter(subscriptions__subscribed_to_id=coach_id)
         .annotate(total_distance=Sum('runs__distance')).order_by('-total_distance').first()
     )
-    max_total_run_distance_athlete = (
-        User.objects
-        .filter(subscriptions__subscribed_to_id=coach_id)
-        .annotate(total_distance=Coalesce(Sum('runs__distance'), Value(0), output_field=FloatField()))
-        .order_by('-total_distance')
-        .first()
-    )
+    # max_total_run_distance_athlete = (
+    #     User.objects
+    #     .filter(subscriptions__subscribed_to_id=coach_id)
+    #     .annotate(total_distance=Coalesce(Sum('runs__distance'), Value(0), output_field=FloatField()))
+    #     .order_by('-total_distance')
+    #     .first()
+    # )
 
     max_avg_run_speed_athlete = (
         User.objects
