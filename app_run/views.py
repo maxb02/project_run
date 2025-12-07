@@ -4,8 +4,10 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError
-from django.db.models import Q
-from django.db.models.aggregates import Count, Avg, Sum
+from django.db.models import Q, FloatField
+from django.db.models import Sum, Value
+from django.db.models.aggregates import Count, Avg
+from django.db.models.functions import Coalesce
 from django.db.models.functions import Round
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
@@ -339,12 +341,26 @@ def analytics_for_coach(request, coach_id):
             {'message': f'User is not a coach'},
             status=status.HTTP_400_BAD_REQUEST)
 
-    coach_athlete_runs = Run.objects.filter(athlete__subscriptions__subscribed_to_id=coach_id)
+    longest_run = Run.objects.filter(athlete__subscriptions__subscribed_to_id=coach_id).order_by('-distance').first()
 
-    longest_run = coach_athlete_runs.order_by('-distance').first()
-    total_run = coach_athlete_runs.annotate(total_distance=Sum('distance')).order_by('-total_distance').first()
+    max_total_run_distance_athlete = (
+        User.objects
+        .filter(subscriptions__subscribed_to_id=coach_id)
+        .annotate(total_distance=Sum('runs__distance')).order_by('-total_distance').first()
+    )
+    max_total_run_distance_athlete = (
+        User.objects
+        .filter(subscriptions__subscribed_to_id=coach_id)
+        .annotate(total_distance=Coalesce(Sum('runs__distance'), Value(0), output_field=FloatField()))
+        .order_by('-total_distance')
+        .first()
+    )
 
-    speed_avg = coach_athlete_runs.annotate(avg_speed=Avg('speed')).order_by('-avg_speed').first()
+    max_avg_run_speed_athlete = (
+        User.objects
+        .filter(subscriptions__subscribed_to_id=coach_id)
+        .annotate(avg_speed=Avg('runs__speed')).order_by('-avg_speed').first()
+    )
 
     return Response({
 
@@ -352,12 +368,12 @@ def analytics_for_coach(request, coach_id):
 
         'longest_run_value': longest_run.distance,
 
-        'total_run_user': total_run.athlete_id,
+        'total_run_user': max_total_run_distance_athlete.id,
 
-        'total_run_value': total_run.total_distance,
+        'total_run_value': max_total_run_distance_athlete.total_distance,
 
-        'speed_avg_user': speed_avg.athlete_id,
+        'speed_avg_user': max_avg_run_speed_athlete.id,
 
-        'speed_avg_value': speed_avg.avg_speed,
+        'speed_avg_value': max_avg_run_speed_athlete.avg_speed,
 
     }, status=status.HTTP_200_OK)
