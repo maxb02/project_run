@@ -975,8 +975,23 @@ class TestAnalyticsForCoach(APITestCase):
 
         )
 
+        self.coach_user_2 = get_user_model().objects.create_user(
+            username='coach_user_2',
+            password='password123',
+            email='test@example.com',
+            is_staff=True,
+
+        )
+
         self.athlete_user2 = get_user_model().objects.create_user(
-            username='athlete_user',
+            username='athlete_user2',
+            password='password123',
+            email='test@example.com',
+            is_staff=False,
+
+        )
+        self.athlete_user3 = get_user_model().objects.create_user(
+            username='athlete_user3',
             password='password123',
             email='test@example.com',
             is_staff=False,
@@ -990,7 +1005,10 @@ class TestAnalyticsForCoach(APITestCase):
             subscriber=self.athlete_user2,
             subscribed_to=self.coach_user,
         )
-
+        Subscribe.objects.create(
+            subscriber=self.athlete_user3,
+            subscribed_to=self.coach_user_2,
+        )
         Run.objects.create(athlete=self.athlete_user1,
                            comment='Test Run athlete_user1 1',
                            status=Run.Status.FINISHED,
@@ -1015,19 +1033,25 @@ class TestAnalyticsForCoach(APITestCase):
                            distance=4,
                            speed=4
                            )
+        Run.objects.create(athlete=self.athlete_user3,
+                           comment='Test Run athlete_user2',
+                           status=Run.Status.FINISHED,
+                           distance=50,
+                           speed=4
+                           )
 
     def test_analytics_for_coachendpoint(self):
         response = self.client.get(reverse('analytics-for-coach', args=[self.coach_user.id]))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        print(response.json())
+
         self.assertEqual(response.data.get('longest_run_user'), self.athlete_user2.id)
         self.assertEqual(response.data.get('longest_run_value'), 4)
 
-        self.assertEqual(response.data.get('total_run_user'), 3)
-        self.assertEqual(response.data.get('total_run_value'), 4)
+        self.assertEqual(response.data.get('total_run_user'), self.athlete_user2.id)
+        self.assertEqual(response.data.get('total_run_value'), 7)
 
-        self.assertEqual(response.data.get('speed_avg_user'), 3)
-        self.assertEqual(response.data.get('speed_avg_value'), 4)
+        self.assertEqual(response.data.get('speed_avg_user'), self.athlete_user2.id)
+        self.assertEqual(response.data.get('speed_avg_value'), 3.5)
 
         with self.assertNumQueries(4):
             self.client.get(reverse('analytics-for-coach', args=[self.coach_user.id]))
