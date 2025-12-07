@@ -341,20 +341,10 @@ def analytics_for_coach(request, coach_id):
 
     coach_athlete_runs = Run.objects.filter(athlete__subscriptions__subscribed_to_id=coach_id)
 
-
     longest_run = coach_athlete_runs.order_by('-distance').first()
+    total_run = coach_athlete_runs.annotate(total_distance=Sum('distance')).order_by('-total_distance').first()
 
-    max_total_run_distance_athlete = (
-        User.objects
-        .filter(subscriptions__subscribed_to_id=coach_id)
-        .annotate(total_distance=Sum('runs__distance')).order_by('-total_distance').first()
-    )
-
-    max_avg_run_speed_athlete = (
-        User.objects
-        .filter(subscriptions__subscribed_to_id=coach_id)
-        .annotate(avg_speed=Avg('runs__speed')).order_by('-avg_speed').first()
-    )
+    speed_avg = coach_athlete_runs.annotate(avg_speed=Avg('speed')).order_by('-avg_speed').first()
 
     return Response({
 
@@ -362,12 +352,12 @@ def analytics_for_coach(request, coach_id):
 
         'longest_run_value': longest_run.distance,
 
-        'total_run_user': max_total_run_distance_athlete.id,
+        'total_run_user': total_run.athlete_id,
 
-        'total_run_value': max_total_run_distance_athlete.total_distance,
+        'total_run_value': total_run.total_distance,
 
-        'speed_avg_user': max_avg_run_speed_athlete.id,
+        'speed_avg_user': speed_avg.athlete_id,
 
-        'speed_avg_value': max_avg_run_speed_athlete.avg_speed,
+        'speed_avg_value': speed_avg.avg_speed,
 
     }, status=status.HTTP_200_OK)
